@@ -1,4 +1,5 @@
 import docker
+from utils import *
 
 class VirtualizedInfrastructureManager():
     """
@@ -8,7 +9,7 @@ class VirtualizedInfrastructureManager():
     def __init__(self):
         self._docker = docker.from_env()
 
-    def create_virtual_device(self, type, image, cpu_count, mem_limit):
+    def create_virtual_device(self, type, image, num_cpus, mem_size):
         """Create a virtual device."""
 
         container = self._docker.containers.run(
@@ -16,20 +17,42 @@ class VirtualizedInfrastructureManager():
             detach=True,
             stdin_open=True,
             tty=True,
-            cpu_count=cpu_count,
-            mem_limit=mem_limit)
+            cpu_count=num_cpus,
+            mem_limit=mem_size)
 
-        print "Container %s created" % container.id
+        device = {
+            'short_id': container.short_id,
+            'image': container.image.tags[0],
+            'ip': self._docker.containers.get(container.id).attrs['NetworkSettings']['IPAddress'],
+            'num_cpus': num_cpus,
+            'mem_size': mem_size
+        }
+
+        insert_db('device', container.id, device)
 
         return container.id
 
     def list_virtual_devices(self):
         """List all virtual devices."""
 
-        print "---\nListing virtual devices:\n"
-        for (num, container) in enumerate(self._docker.containers.list(), start=1):
-          print "%d. [container] [%s] [%s] [%s] [%s]" % (num, container.image.tags[0], container.short_id, container.attrs['NetworkSettings']['IPAddress'] , container.status)
-        print "---\n"
+        devices = load_db('device')
+
+        for id in devices:
+            print "[container] [%s] [%s] [%s] [%s]" % (devices[id]['image'], id, devices[id]['ip'], self.get_status(id))
+
+    def get_device(self, v_id):
+        """Get information from a specific device."""
+
+        devices = load_db('device')
+
+        for id in devices:
+            if id == v_id:
+                return devices[id]
+
+    def get_status(self, id):
+        """Get status of a virtual device."""
+
+        return self._docker.containers.get(id).status
 
     def delete_virtual_device(self, id):
         """Delete a virtual device."""
@@ -40,15 +63,23 @@ class VirtualizedInfrastructureManager():
         container.stop()
         container.remove()
 
+        remove_db('device', id)
+
     def purge_devices(self):
         """Stop and delete all virtual devices."""
 
         print "Purging all virtual devices..."
+
         for container in self._docker.containers.list():
             print container.id
             container.stop()
+
         self._docker.containers.prune()
 
-    def get_virtual_device(self, id):
-        """."""
-        pass
+        devices = load_db('device')
+
+        for id in devices:
+            try:
+                remove_db('device', id)
+            except:
+                pass
