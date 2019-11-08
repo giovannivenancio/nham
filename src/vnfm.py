@@ -1,5 +1,6 @@
 import yaml
 from vim import *
+from utils import *
 
 class VNFManager():
     """
@@ -25,17 +26,55 @@ class VNFManager():
         mem_size = resources['mem_size']
         num_cpus = resources['num_cpus']
 
-        self._vim.create_virtual_device(type, image, num_cpus, mem_size)
+        device = self._vim.create_virtual_device(type, image, num_cpus, mem_size)
 
-        # fazer os requisitos de HA no NHAM
+        vnf = {
+            'id': generate_id(),
+            'device_id': device['id'],
+            'network_function': 'forwarder',
+            'timestamp': get_current_time()
+        }
+
+        insert_db('vnf', vnf['id'], vnf)
+
+        print "VNF created: %s" % vnf['id']
+
+        return vnf
 
     def list_vnfs(self):
-        """."""
-        pass
+        """List all VNFs."""
 
-    def vnf_delete(vnf_id):
+        vnfs = load_db('vnf')
+
+        for id in vnfs:
+            print "[VNF] [%s] [%s] [%s] [%s]" % (id, vnfs[id]['network_function'], self._vim.get_status(vnfs[id]['device_id']), vnfs[id]['timestamp'])
+
+    def get_vnf(self, vnf_id):
+        """Get information from a specific device."""
+
+        vnfs = load_db('vnf')
+
+        for id in vnfs:
+            if id == vnf_id:
+                return vnfs[id]
+
+    def vnf_delete(self, vnf_id):
         """Delete a VNF."""
-        pass
 
-        # remove pelo vim
-        # remove backups
+        vnf = self.get_vnf(vnf_id)
+        self._vim.delete_virtual_device(vnf['device_id'])
+
+        remove_db('vnf', vnf_id)
+
+    def purge_vnfs(self):
+        """Delete all VNFs."""
+
+        self._vim.purge_devices()
+
+        vnfs = load_db('vnf')
+
+        for id in vnfs:
+            try:
+                remove_db('vnf', id)
+            except:
+                pass

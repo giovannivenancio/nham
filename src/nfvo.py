@@ -1,5 +1,5 @@
 from vnfm import *
-from utils import generate_id
+from utils import *
 
 class NFVOrchestrator():
     """
@@ -7,29 +7,64 @@ class NFVOrchestrator():
     """
 
     def __init__(self):
-        self._bd_path = '../db/sfcs'
+        self._vnfm = VNFManager()
 
     def sfc_create(self, num_vnfs, vnfd):
         """Create a SFC."""
 
+        chain = []
         for i in range(num_vnfs):
-            vnfm.create(vnfd)
+            vnf = self._vnfm.vnf_create(vnfd)
+            chain.append(vnf['id'])
 
-        # create routes
-        #ip route add src via dest
+        sfc = {
+            'id': generate_id(),
+            'chain': chain,
+            'timestamp': get_current_time()
+        }
 
-        sfc_id = generate_id()
+        insert_db('sfc', sfc['id'], sfc)
 
-        # TODO: implement a real database
-        with open(self._db_path, 'r') as db:
-            db.write(sfc_id, chain, '\n')
+        return sfc
 
     def list_sfcs(self):
-        """."""
+        """List all SFCs."""
 
-    def sfc_delete(sfc_id):
-        """Delete a sfc."""
-        pass
+        sfcs = load_db('sfc')
 
-        # remove vnfs from chain
-        # delete from file
+        for id in sfcs:
+            print "[SFC] [%s] [%s]" % (id, sfcs[id]['timestamp'])
+            for vnf in sfcs[id]['chain']:
+                print "  %s" % vnf
+
+    def get_sfc(self, sfc_id):
+        """Get information from a specific SFC."""
+
+        sfcs = load_db('sfc')
+
+        for id in sfcs:
+            if id == sfc_id:
+                return sfcs[id]
+
+    def sfc_delete(self, sfc_id):
+        """Delete a SFC."""
+
+        sfc = self.get_sfc(sfc_id)
+
+        for vnf_id in sfc['chain']:
+            self._vnfm.vnf_delete(vnf_id)
+
+        remove_db('sfc', sfc_id)
+
+    def purge_sfcs(self):
+        """Delete all SFCs."""
+
+        self._vnfm.purge_vnfs()
+
+        sfcs = load_db('sfc')
+
+        for id in sfcs:
+            try:
+                remove_db('sfc', id)
+            except:
+                pass

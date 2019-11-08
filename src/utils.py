@@ -2,6 +2,8 @@ import ast
 import random
 import string
 
+from datetime import datetime
+
 DB_DEVICE = '../db/device'
 DB_VNF = '../db/vnf'
 DB_SFC = '../db/sfc'
@@ -10,6 +12,9 @@ def generate_id():
     """Generate a unique 16-byte ID."""
 
     return ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
+
+def get_current_time():
+    return datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
 def get_db_path(db):
     """.Get database path."""

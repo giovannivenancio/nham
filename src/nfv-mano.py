@@ -9,14 +9,13 @@ from nham import *
 
 vim = VirtualizedInfrastructureManager()
 vnfm = VNFManager()
-
-type = 'container'
-image = 'ubuntu'
-cpu_count = int('2')
-mem_limit = '512MB'
+nfvo = NFVOrchestrator()
 
 #vnfm.vnf_create(sys.argv[1])
-#vnfm.vnf_create(sys.argv[1])
-#vnfm.vnf_create(sys.argv[1])
-#vim.list_virtual_devices()
-#vim.purge_devices()
+#vnfm.list_vnfs()
+#nfvo.sfc_create(3, sys.argv[1])
+
+#nfvo.sfc_delete('HpnpxT7f6f0UtrIM')
+nfvo.list_sfcs()
+nfvo.purge_sfcs()
+nfvo.list_sfcs()

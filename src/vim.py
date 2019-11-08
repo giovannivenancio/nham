@@ -21,6 +21,7 @@ class VirtualizedInfrastructureManager():
             mem_limit=mem_size)
 
         device = {
+            'id': container.id,
             'short_id': container.short_id,
             'image': container.image.tags[0],
             'ip': self._docker.containers.get(container.id).attrs['NetworkSettings']['IPAddress'],
@@ -28,9 +29,9 @@ class VirtualizedInfrastructureManager():
             'mem_size': mem_size
         }
 
-        insert_db('device', container.id, device)
+        insert_db('device', device['id'], device)
 
-        return container.id
+        return device
 
     def list_virtual_devices(self):
         """List all virtual devices."""
