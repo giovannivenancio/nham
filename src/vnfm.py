@@ -10,7 +10,7 @@ class VNFManager():
     def __init__(self):
         self._vim = VirtualizedInfrastructureManager()
 
-    def vnf_create(self, vnfd_file):
+    def create_vnf(self, vnfd_file):
         """Create a VNF."""
 
         with open(vnfd_file, 'r') as stream:
@@ -58,7 +58,7 @@ class VNFManager():
             if id == vnf_id:
                 return vnfs[id]
 
-    def vnf_delete(self, vnf_id):
+    def delete_vnf(self, vnf_id):
         """Delete a VNF."""
 
         vnf = self.get_vnf(vnf_id)

@@ -9,12 +9,12 @@ class NFVOrchestrator():
     def __init__(self):
         self._vnfm = VNFManager()
 
-    def sfc_create(self, num_vnfs, vnfd):
+    def create_sfc(self, num_vnfs, vnfd):
         """Create a SFC."""
 
         chain = []
         for i in range(num_vnfs):
-            vnf = self._vnfm.vnf_create(vnfd)
+            vnf = self._vnfm.create_vnf(vnfd)
             chain.append(vnf['id'])
 
         sfc = {
@@ -46,13 +46,13 @@ class NFVOrchestrator():
             if id == sfc_id:
                 return sfcs[id]
 
-    def sfc_delete(self, sfc_id):
+    def delete_sfc(self, sfc_id):
         """Delete a SFC."""
 
         sfc = self.get_sfc(sfc_id)
 
         for vnf_id in sfc['chain']:
-            self._vnfm.vnf_delete(vnf_id)
+            self._vnfm.delete_vnf(vnf_id)
 
         remove_db('sfc', sfc_id)
 
