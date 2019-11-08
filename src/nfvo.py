@@ -12,6 +12,8 @@ class NFVOrchestrator():
     def create_sfc(self, num_vnfs, vnfd):
         """Create a SFC."""
 
+        print "Creating SFC with %s VNFs" % num_vnfs
+
         chain = []
         for i in range(num_vnfs):
             vnf = self._vnfm.create_vnf(vnfd)
@@ -25,6 +27,8 @@ class NFVOrchestrator():
 
         insert_db('sfc', sfc['id'], sfc)
 
+        print "SFC created: %s" % sfc['id']
+
         return sfc
 
     def list_sfcs(self):
@@ -36,6 +40,7 @@ class NFVOrchestrator():
             print "[SFC] [%s] [%s]" % (id, sfcs[id]['timestamp'])
             for vnf in sfcs[id]['chain']:
                 print "  %s" % vnf
+            print ""
 
     def get_sfc(self, sfc_id):
         """Get information from a specific SFC."""
@@ -49,6 +54,8 @@ class NFVOrchestrator():
     def delete_sfc(self, sfc_id):
         """Delete a SFC."""
 
+        print "Deleting SFC %s" % sfc_id
+
         sfc = self.get_sfc(sfc_id)
 
         for vnf_id in sfc['chain']:
@@ -56,8 +63,12 @@ class NFVOrchestrator():
 
         remove_db('sfc', sfc_id)
 
+        print "SFC deleted"
+
     def purge_sfcs(self):
         """Delete all SFCs."""
+
+        print "Purging SFCs"
 
         self._vnfm.purge_vnfs()
 
@@ -68,3 +79,5 @@ class NFVOrchestrator():
                 remove_db('sfc', id)
             except:
                 pass
+
+        print "All SFCs were purged"

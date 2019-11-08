@@ -58,8 +58,6 @@ class VirtualizedInfrastructureManager():
     def delete_virtual_device(self, id):
         """Delete a virtual device."""
 
-        print "Deleting container %s" % id
-
         container = self._docker.containers.get(id)
         container.stop()
         container.remove()
@@ -69,10 +67,7 @@ class VirtualizedInfrastructureManager():
     def purge_devices(self):
         """Stop and delete all virtual devices."""
 
-        print "Purging all virtual devices..."
-
         for container in self._docker.containers.list():
-            print container.id
             container.stop()
 
         self._docker.containers.prune()

@@ -48,6 +48,7 @@ class VNFManager():
 
         for id in vnfs:
             print "[VNF] [%s] [%s] [%s] [%s]" % (id, vnfs[id]['network_function'], self._vim.get_status(vnfs[id]['device_id']), vnfs[id]['timestamp'])
+        print ""
 
     def get_vnf(self, vnf_id):
         """Get information from a specific device."""
@@ -65,6 +66,8 @@ class VNFManager():
         self._vim.delete_virtual_device(vnf['device_id'])
 
         remove_db('vnf', vnf_id)
+
+        print "VNF deleted: %s" % vnf_id
 
     def purge_vnfs(self):
         """Delete all VNFs."""
