@@ -30,14 +30,16 @@ class VNFManager():
 
         vnf = {
             'id': generate_id(),
+            'short_id': device['short_id'],
             'device_id': device['id'],
+            'ip': device['ip'],
             'network_function': 'forwarder',
             'timestamp': get_current_time()
         }
 
         insert_db('vnf', vnf['id'], vnf)
 
-        print "VNF created: %s" % vnf['id']
+        print "VNF created: %s" % vnf['short_id']
 
         return vnf
 

@@ -15,6 +15,7 @@ class VirtualizedInfrastructureManager():
         container = self._docker.containers.run(
             image,
             detach=True,
+            cap_add=['NET_ADMIN'],
             stdin_open=True,
             tty=True,
             cpu_count=num_cpus,
@@ -41,7 +42,9 @@ class VirtualizedInfrastructureManager():
         for id in devices:
             print "[container] [%s] [%s] [%s] [%s]" % (devices[id]['image'], id, devices[id]['ip'], self.get_status(id))
 
-    def get_device(self, v_id):
+        return devices
+
+    def get_virtual_device(self, v_id):
         """Get information from a specific device."""
 
         devices = load_db('device')
@@ -79,3 +82,9 @@ class VirtualizedInfrastructureManager():
                 remove_db('device', id)
             except:
                 pass
+
+    def exec_cmd(self, id, cmd):
+        """Execute a command on the virtual device."""
+
+        device = self._docker.containers.get(id)
+        device.exec_run(cmd)
