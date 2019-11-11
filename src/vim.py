@@ -16,6 +16,7 @@ class VirtualizedInfrastructureManager():
             image,
             detach=True,
             cap_add=['NET_ADMIN'],
+            security_opt=['seccomp:unconfined'],
             stdin_open=True,
             tty=True,
             cpu_count=num_cpus,

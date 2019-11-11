@@ -24,7 +24,7 @@ class FaultManagementSystem():
         self.fd.terminate()
 
     def monitor(self):
-        """."""
+        """Monitor each virtual device and reports if a failure was found."""
 
         for id in self.devices:
             device = self.devices[id]
@@ -39,7 +39,7 @@ class FaultManagementSystem():
         self.devices = load_db('device')
 
     def check_health(self, device):
-        """Check health of device.
+        """Check the health of specified device.
         This function is used to verify if a VNF is up and running or is faulty."""
         return not os.system("ping -q -c 1 -W 2 %s > /dev/null 2>&1" % device['ip'])
 

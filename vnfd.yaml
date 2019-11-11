@@ -15,12 +15,9 @@ topology_template:
         availability_zone: nova
 
     policies:
-    - SP1:
-        increment: 1
-        cooldown: 120
-        min_instances: 1
-        max_instances: 3
-        default_instances: 1
+      min_instances: 1
+      max_instances: 3
+      default_instances: 1
 
     - vdu_cpu_usage_monitoring_policy:
         triggers:
