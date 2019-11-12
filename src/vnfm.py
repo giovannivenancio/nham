@@ -88,7 +88,7 @@ class VNFManager():
 
         for id in vnfs:
             try:
-                remove_db('vnf', id)
                 remove_db('state', id)
+                remove_db('vnf', id)
             except:
                 pass

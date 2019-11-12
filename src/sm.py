@@ -1,6 +1,6 @@
 import os
 import time
-
+from subprocess import check_output
 from vnfm import *
 from utils import *
 
@@ -18,17 +18,27 @@ class StateManager():
         self._vim = VirtualizedInfrastructureManager()
         self._db_path = '/tmp/'
 
-    def export_vnf_state(self, vnf_id, checkpoint, save_db):
+    def export_vnf_state(self, vnf_id):
         """Export a VNF internal state to a tarball."""
 
         vnf = self._vnfm.get_vnf(vnf_id)
         virtual_device = self._vim.get_virtual_device(vnf['device_id'])
 
-        checkpoint_cmd = 'docker checkpoint create --leave-running=true %s %s' % (vnf['device_id'], checkpoint)
-        os.system(checkpoint_cmd)
+        checkpoint_name = 'checkpoint_%s' % generate_id()
+
+        checkpoint_cmd = 'docker checkpoint create --leave-running=true %s %s' % (vnf['device_id'], checkpoint_name)
+
+        try:
+            res = check_output(
+                ['docker', 'checkpoint', 'create', '--leave-running=true', vnf['device_id'], checkpoint_name],
+                stderr=open(os.devnull, 'w'))
+            print "checkpoint %s created for VNF %s" % (checkpoint_name, vnf_id)
+        except:
+            print "no new checkpoint required for VNF %s" % vnf_id
+            return
 
         state_entry = {
-            'checkpoint': checkpoint,
+            'checkpoint': checkpoint_name,
             'timestamp': get_current_time()
         }
 
@@ -37,10 +47,10 @@ class StateManager():
         else:
             update_db('state', vnf['id'], str(state_entry))
 
-        if save_db:
-            pack_name = self._db_path + checkpoint + '_' + vnf_id + '.tar.gz'
-            pack_cmd = 'sudo tar cvzf %s -C /var/lib/docker/containers/%s/checkpoints/%s . >/dev/null 2>&1' % (pack_name, virtual_device['id'], checkpoint)
-            os.system(pack_cmd)
+        # save VNF state to database
+        pack_name = self._db_path + checkpoint_name + '_' + vnf_id + '.tar.gz'
+        pack_cmd = 'sudo tar cvzf %s -C /var/lib/docker/containers/%s/checkpoints/%s . >/dev/null 2>&1' % (pack_name, virtual_device['id'], checkpoint_name)
+        os.system(pack_cmd)
 
     def import_vnf_state(self, destination, source, epoch):
         """Import a state to a VNF. If epoch is None, the latest will be used.
@@ -90,12 +100,11 @@ class StateManager():
 
 sm = StateManager()
 
-# sm.export_vnf_state('OVkTxWVWaYIRdJwp', 'c0', save_db=True)
-# time.sleep(2)
-# sm.export_vnf_state('OVkTxWVWaYIRdJwp', 'c1', save_db=True)
-# time.sleep(2)
-# sm.export_vnf_state('OVkTxWVWaYIRdJwp', 'c2', save_db=True)
-# sm.list_states()
+sm.export_vnf_state('teLjcOSIDdSKIgFm')
+time.sleep(3)
+sm.export_vnf_state('teLjcOSIDdSKIgFm')
+time.sleep(3)
+sm.export_vnf_state('teLjcOSIDdSKIgFm')
 
 #sm.import_vnf_state('4yafwsHN7HVEwUZK', 'siI347bgaq6mGayO', epoch="12/11/2019 10:40:19", new_vnf=False)
-sm.import_vnf_state('M7VvLQ9rTuSh3egl', 'OVkTxWVWaYIRdJwp', epoch=False)
+#sm.import_vnf_state('M7VvLQ9rTuSh3egl', 'OVkTxWVWaYIRdJwp', epoch=False)
