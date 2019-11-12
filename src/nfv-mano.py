@@ -7,10 +7,12 @@ from multiprocessing import *
 from nfvo import *
 from vnfm import *
 from vim import *
+from sm import *
 
 vim = VirtualizedInfrastructureManager()
 vnfm = VNFManager()
 nfvo = NFVOrchestrator()
+sm = StateManager()
 
 if __name__ == "__main__":
 
@@ -34,6 +36,8 @@ if __name__ == "__main__":
             vnfm.list_vnfs()
         elif type == 'device':
             vim.list_virtual_devices()
+        elif type == 'state':
+            sm.list_states()
 
     elif action == 'delete':
         type = sys.argv[2]

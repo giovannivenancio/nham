@@ -17,7 +17,7 @@ class VNFManager():
             try:
                 vnfd = yaml.safe_load(stream)
             except yaml.YAMLError as exc:
-                print exc
+                print "error", exc
                 return
 
         type = vnfd['topology_template']['node_templates']['VDU1']['properties']['type']
@@ -39,7 +39,7 @@ class VNFManager():
 
         insert_db('vnf', vnf['id'], vnf)
 
-        print "VNF created: %s" % vnf['short_id']
+        print "VNF created: %s" % vnf['id']
 
         return vnf
 
@@ -71,6 +71,14 @@ class VNFManager():
 
         print "VNF deleted: %s" % vnf_id
 
+    def stop_vnf(self, vnf_id):
+        """Stop a VNF."""
+
+        vnf = self.get_vnf(vnf_id)
+        self._vim.stop_virtual_device(vnf['device_id'])
+
+        print "VNF stopped: %s" % vnf_id
+
     def purge_vnfs(self):
         """Delete all VNFs."""
 
@@ -81,5 +89,6 @@ class VNFManager():
         for id in vnfs:
             try:
                 remove_db('vnf', id)
+                remove_db('state', id)
             except:
                 pass

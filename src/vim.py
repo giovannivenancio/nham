@@ -68,6 +68,12 @@ class VirtualizedInfrastructureManager():
 
         remove_db('device', id)
 
+    def stop_virtual_device(self, id):
+        """Stop a virtual device."""
+
+        container = self._docker.containers.get(id)
+        container.stop()
+
     def purge_devices(self):
         """Stop and delete all virtual devices."""
 
