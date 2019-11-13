@@ -6,8 +6,8 @@ class Resiliency():
     def __init__(self):
         pass
 
-    def init_backup(self):
-        """."""
+    def create_backup(self, num_backups, vnfd):
+        """Create backups for a specific VNF."""
         pass
 
     def update_backup(self):

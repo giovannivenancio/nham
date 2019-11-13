@@ -57,6 +57,10 @@ class FaultManagementSystem():
         """."""
         pass
 
+    def reconfiguration(self):
+        """."""
+        pass
+
     def mainloop(self):
         """."""
 

@@ -97,14 +97,3 @@ class StateManager():
             if id == vnf_id:
                 return states[id]
         return None
-
-sm = StateManager()
-
-sm.export_vnf_state('teLjcOSIDdSKIgFm')
-time.sleep(3)
-sm.export_vnf_state('teLjcOSIDdSKIgFm')
-time.sleep(3)
-sm.export_vnf_state('teLjcOSIDdSKIgFm')
-
-#sm.import_vnf_state('4yafwsHN7HVEwUZK', 'siI347bgaq6mGayO', epoch="12/11/2019 10:40:19", new_vnf=False)
-#sm.import_vnf_state('M7VvLQ9rTuSh3egl', 'OVkTxWVWaYIRdJwp', epoch=False)

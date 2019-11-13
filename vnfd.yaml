@@ -8,48 +8,17 @@ topology_template:
         nfv_compute:
           properties:
             mem_size: 512 MB
-            num_cpus: 2
+            num_cpus: 1
       properties:
         type: container
         image: gvsouza/nham
         availability_zone: nova
 
-    policies:
-    - SP1:
-        increment: 1
-        cooldown: 120
-        min_instances: 1
-        max_instances: 3
-        default_instances: 1
-
-    - vdu_cpu_usage_monitoring_policy:
-        triggers:
-            vdu_hcpu_usage_scaling_out:
-                event_type:
-                    type: tosca.events.resource.utilization
-                    implementation: ceilometer
-                metric: cpu_util
-                condition:
-                    threshold: 80
-                    constraint: utilization greater_than 80%
-                    granularity: 60
-                    evaluations: 1
-                    aggregation_method: mean
-                    resource_type: instance
-                    comparison_operator: gt
-                action: [SP1]
-
-            vdu_lcpu_usage_scaling_in:
-                event_type:
-                    type: tosca.events.resource.utilization
-                    implementation: ceilometer
-                metric: cpu_util
-                condition:
-                    threshold: 10
-                    constraint: utilization less_than 10%
-                    granularity: 60
-                    evaluations: 1
-                    aggregation_method: mean
-                    resource_type: instance
-                    comparison_operator: lt
-                action: [SP1]
+    resiliency:
+      num_backups: 1
+      vnf_level:
+        type: active-standby  # options: active-standby, active-active, None
+        cooldown: 120         # apply only for active-active
+      infra_level:
+        type: local           # options: local, remote, None
+        remote_site: x.y.z.w  # apply only for remote

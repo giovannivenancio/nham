@@ -1,5 +1,7 @@
 import yaml
+
 from vim import *
+from resil import *
 from utils import *
 
 class VNFManager():
@@ -20,13 +22,43 @@ class VNFManager():
                 print "error", exc
                 return
 
-        type = vnfd['topology_template']['node_templates']['VDU1']['properties']['type']
-        image = vnfd['topology_template']['node_templates']['VDU1']['properties']['image']
-        resources = vnfd['topology_template']['node_templates']['VDU1']['capabilities']['nfv_compute']['properties']
+        vdu = vnfd['topology_template']['node_templates']['VDU1']
+        resil_requirements = vnfd['topology_template']['node_templates']['resiliency']
+        resources = vdu['capabilities']['nfv_compute']['properties']
+
+        virtual_device_type = vdu['properties']['type']
+        image = vdu['properties']['image']
         mem_size = resources['mem_size']
         num_cpus = resources['num_cpus']
+        num_backups = resil_requirements['num_backups']
 
-        device = self._vim.create_virtual_device(type, image, num_cpus, mem_size)
+        if num_backups >= 1:
+            vnf_level = resil_requirements['vnf_level']
+            infra_level = resil_requirements['infra_level']
+
+            if vnf_level['type'] == 'active-active':
+                cooldown = vnf_level['cooldown']
+
+            if infra_level['type'] == 'remote':
+                remote_site = infra_level['remote_site']
+
+        # main virtual device for VNF
+        device = self._vim.create_virtual_device(
+            virtual_device_type,
+            image,
+            num_cpus,
+            mem_size)
+
+        # create backups
+        if num_backups >= 1:
+            backups = []
+            for i in range(num_backups):
+                backup = self._vim.create_virtual_device(
+                    virtual_device_type,
+                    image,
+                    num_cpus,
+                    mem_size)
+                backups.append(device['short_id'])
 
         vnf = {
             'id': generate_id(),
@@ -34,6 +66,8 @@ class VNFManager():
             'device_id': device['id'],
             'ip': device['ip'],
             'network_function': 'forwarder',
+            'recovery_mode': vnf_level['type'],
+            'backups': backups,
             'timestamp': get_current_time()
         }
 
@@ -50,6 +84,7 @@ class VNFManager():
 
         for id in vnfs:
             print "[VNF] [%s] [%s] [%s] [%s]" % (id, vnfs[id]['network_function'], self._vim.get_status(vnfs[id]['device_id']), vnfs[id]['timestamp'])
+            print "%s backups: %s" % (" "*2, vnfs[id]['backups'])
         print ""
 
     def get_vnf(self, vnf_id):
