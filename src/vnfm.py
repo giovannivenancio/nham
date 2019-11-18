@@ -1,7 +1,7 @@
 import yaml
 
 from vim import *
-from resil import *
+#from sm import *
 from utils import *
 
 class VNFManager():
@@ -11,6 +11,7 @@ class VNFManager():
 
     def __init__(self):
         self._vim = VirtualizedInfrastructureManager()
+        #self._sm = StateManager()
 
     def create_vnf(self, vnfd_file):
         """Create a VNF."""
@@ -66,8 +67,11 @@ class VNFManager():
             'device_id': device['id'],
             'ip': device['ip'],
             'network_function': 'forwarder',
-            'recovery_mode': vnf_level['type'],
-            'backups': backups,
+            'recovery': {
+                'method': vnf_level['type'],
+                'cooldown': cooldown if vnf_level['type'] == 'active-active' else None,
+                'backups': backups
+            },
             'timestamp': get_current_time()
         }
 
@@ -84,7 +88,7 @@ class VNFManager():
 
         for id in vnfs:
             print "[VNF] [%s] [%s] [%s] [%s]" % (id, vnfs[id]['network_function'], self._vim.get_status(vnfs[id]['device_id']), vnfs[id]['timestamp'])
-            print "%s backups: %s" % (" "*2, vnfs[id]['backups'])
+            print "%s backups: %s" % (" "*2, vnfs[id]['recovery']['backups'])
         print ""
 
     def get_vnf(self, vnf_id):

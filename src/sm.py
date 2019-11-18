@@ -1,6 +1,9 @@
 import os
 import time
+
 from subprocess import check_output
+from multiprocessing import Process, Queue
+
 from vnfm import *
 from utils import *
 
@@ -14,9 +17,9 @@ class StateManager():
     """
 
     def __init__(self):
+        self._db_path = '/tmp/'
         self._vnfm = VNFManager()
         self._vim = VirtualizedInfrastructureManager()
-        self._db_path = '/tmp/'
 
     def export_vnf_state(self, vnf_id):
         """Export a VNF internal state to a tarball."""
@@ -29,6 +32,7 @@ class StateManager():
         checkpoint_cmd = 'docker checkpoint create --leave-running=true %s %s' % (vnf['device_id'], checkpoint_name)
 
         try:
+            print ' '.join(['docker', 'checkpoint', 'create', '--leave-running=true', vnf['device_id'], checkpoint_name])
             res = check_output(
                 ['docker', 'checkpoint', 'create', '--leave-running=true', vnf['device_id'], checkpoint_name],
                 stderr=open(os.devnull, 'w'))
@@ -55,11 +59,14 @@ class StateManager():
     def import_vnf_state(self, destination, source, epoch):
         """Import a state to a VNF. If epoch is None, the latest will be used.
         If new_vnf contains a VNFD, then a new VNF is created, otherwise an existent VNF
-        will receive the imported state."""
+        will receive the imported state.
 
+        destination: container ID
+        source: VNF ID
+        epoch: timestamp
+        """
 
-        vnf = self._vnfm.get_vnf(destination)
-        self._vnfm.stop_vnf(destination)
+        self._vim.stop_virtual_device(destination)
         states = self.get_states(source)
 
         if epoch:
@@ -71,11 +78,11 @@ class StateManager():
 
         pack_name = self._db_path + checkpoint_name + '_' + source + '.tar.gz'
 
-        target_dir = '/var/lib/docker/containers/%s/checkpoints/%s' % (vnf['device_id'], checkpoint_name)
+        target_dir = '/var/lib/docker/containers/%s/checkpoints/%s' % (destination, checkpoint_name)
         unpack_cmd = 'sudo mkdir -p %s && sudo tar -C %s -xvf %s >/dev/null 2>&1' % (target_dir, target_dir, pack_name)
         os.system(unpack_cmd)
 
-        restore_cmd = "docker start --checkpoint %s %s" % (checkpoint_name, vnf['device_id'])
+        restore_cmd = "docker start --checkpoint %s %s" % (checkpoint_name, destination)
         os.system(restore_cmd)
 
     def list_states(self):
@@ -97,3 +104,38 @@ class StateManager():
             if id == vnf_id:
                 return states[id]
         return None
+
+    def spawn_sync_state(self, vnf):
+        """."""
+
+        import time
+
+        vnf_id = vnf['id']
+        cooldown = int(vnf['recovery']['cooldown'])
+        backups = vnf['recovery']['backups']
+
+        while True:
+            print "------------\nimporting state to %s every %s seconds\n------------\n" % (backups, cooldown)
+
+            # create a checkpoint
+            self.export_vnf_state(vnf_id)
+
+            # import checkpoint into backups
+            self.import_vnf_state(destination=backup, source=vnf_id, epoch=None)
+
+            time.sleep(3)
+            #time.sleep(cooldown)
+
+    def sync_state(self, vnf):
+        """Create a job to sync internal state of active-active replication VNFs."""
+
+        sync_vnf = Process(
+            target=self.spawn_sync_state,
+            args=(vnf,))
+        sync_vnf.daemon = True
+        sync_vnf.start()
+
+sm = StateManager()
+
+sm.export_vnf_state('AiG9nbKgXn7e5jFo')
+#sm.import_vnf_state('b5e5d99adb', 'vWIv89wd2sLLXa39', epoch=None)

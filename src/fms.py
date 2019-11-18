@@ -41,6 +41,7 @@ class FaultManagementSystem():
     def check_health(self, device):
         """Check the health of specified device.
         This function is used to verify if a VNF is up and running or is faulty."""
+        
         return not os.system("ping -q -c 1 -W 2 %s > /dev/null 2>&1" % device['ip'])
 
     def alarm(self):

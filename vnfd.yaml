@@ -17,7 +17,7 @@ topology_template:
     resiliency:
       num_backups: 1
       vnf_level:
-        type: active-standby  # options: active-standby, active-active, None
+        type: active-active  # options: active-standby, active-active, None
         cooldown: 120         # apply only for active-active
       infra_level:
         type: local           # options: local, remote, None

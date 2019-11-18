@@ -1,9 +1,10 @@
 import time
 import sys
+import signal
 
 from fms import *
-
-import signal
+from vnfm import *
+from sm import *
 
 def exit_handler(signal, frame):
     print "EXITING NHAM"
@@ -12,8 +13,19 @@ def exit_handler(signal, frame):
 
 signal.signal(signal.SIGINT, exit_handler)
 
-fms = FaultManagementSystem()
+#fms = FaultManagementSystem()
+sm = StateManager()
+
+sync_vnfs = []
 
 while True:
-    #print "doing something else"
-    time.sleep(1)
+    vnf = load_db('vnf')
+
+    print "sync vnfs: ", sync_vnfs
+
+    for id in vnf:
+        if id not in sync_vnfs and vnf[id]['recovery']['method'] == 'active-active':
+            sm.sync_state(vnf[id])
+            sync_vnfs.append(id)
+
+    time.sleep(3)
