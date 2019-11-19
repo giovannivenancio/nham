@@ -29,8 +29,8 @@ class VNFManager():
 
         virtual_device_type = vdu['properties']['type']
         image = vdu['properties']['image']
-        mem_size = resources['mem_size']
         num_cpus = resources['num_cpus']
+        mem_size = resources['mem_size']
         num_backups = resil_requirements['num_backups']
 
         if num_backups >= 1:
@@ -63,7 +63,7 @@ class VNFManager():
                     image,
                     num_cpus,
                     mem_size)
-                backups.append(device['short_id'])
+                backups.append(backup)
 
         vnf = {
             'id': generate_id(),

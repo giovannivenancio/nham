@@ -48,6 +48,9 @@ class FaultManagementSystem():
     def alarm(self, device_id):
         """Upon failure, start fault isolation, recovery and reconfiguration."""
 
+        from vim import VirtualizedInfrastructureManager
+        vim = VirtualizedInfrastructureManager()
+
         vnfs = load_db('vnf')
         sfcs = load_db('sfc')
 
@@ -65,21 +68,18 @@ class FaultManagementSystem():
 
         # isolate fault
         print "isolating fault of VNF %s in the SFC %s" % (faulty_vnf['id'], faulty_sfc['id'])
-        self.isolation(faulty_sfc, faulty_vnf)
+        self.isolation(vim, faulty_sfc, faulty_vnf)
 
         # recovery from fault
-        #self.recovery()
+        self.recovery(vim, faulty_vnf)
 
         # reconfigure SFC
         #self.reconfigure()
 
-    def isolation(self, faulty_sfc, faulty_vnf):
+    def isolation(self, vim, faulty_sfc, faulty_vnf):
         """Isolate the fault of a VNF in the SFC.
         All communications of the previous and the next VNF of the faulty VNF are disabled.
         """
-
-        from vim import VirtualizedInfrastructureManager
-        vim = VirtualizedInfrastructureManager()
 
         vnfs = load_db('vnf')
 
@@ -131,17 +131,83 @@ class FaultManagementSystem():
             vim.exec_cmd(previous_device_id, forward_drop)
             vim.exec_cmd(previous_device_id, nat_drop)
 
-    def recovery(self):
-        """."""
-        # define os tipos de recovery
-        # se for 1: stop/rm (master); create; reconfigure
-        # se for 2: stop/rm (master); reconfigure
-        # se for 3, 4: reconfigure
-        pass
+    def recovery(self, vim, faulty_sfc, faulty_vnf):
+        """Recover VNF from fault."""
 
-    def reconfiguration(self):
-        """."""
-        pass
+        recovery_method = faulty_vnf['recovery']['method']
+
+        if recovery_method == None:
+            # stop and remove "master" VNF
+            vim.delete_virtual_device(faulty_vnf['id'])
+
+            vdu = faulty_vnf['vnfd']['topology_template']['node_templates']['VDU1']
+            resources = vdu['capabilities']['nfv_compute']['properties']
+
+            virtual_device_type = vdu['properties']['type']
+            image = vdu['properties']['image']
+            num_cpus = resources['num_cpus']
+            mem_size = resources['mem_size']
+
+            # create new virtual device for VNF
+            new_device = vim.create_virtual_device(
+                virtual_device_type,
+                image,
+                num_cpus,
+                mem_size)
+
+            # TODO: import vnf state...
+
+            self.reconfigure(recovery_method, faulty_vnf, new_device)
+
+        elif recovery_method == 'active-standby':
+            # stop and remove "master" VNF
+            vim.delete_virtual_device(faulty_vnf['id'])
+
+            # TODO: create new backup in background
+            # TODO: import vnf state
+
+            self.reconfigure(recovery_method, faulty_vnf, None)
+
+        elif recovery_method == 'active-active':
+            # stop and remove "master" VNF
+            vim.delete_virtual_device(faulty_vnf['id'])
+
+            # TODO: create new backup in background
+
+            self.reconfigure(recovery_method, faulty_vnf, None)
+
+        elif recovery_method == 'multisync':
+            # reconfigure
+            pass
+
+    def reconfigure(self, recovery_method, faulty_vnf, new_device):
+        """After fault recovery, reconfigure VNF and SFC."""
+
+        if recovery_method == None:
+            # update VNF
+            faulty_vnf['short_id'] = new_device['short_id']
+            faulty_vnf['device_id'] = new_device['id']
+            faulty_vnf['ip'] = new_device['ip']
+
+            update_db('replace', 'vnf', faulty_vnf['id'], faulty_vnf)
+
+        elif recovery_method == 'active-standby' or recovery_method == 'active-active':
+            # replace VNF backup device
+            backup_device = faulty_vnf['recovery']['backups'][0]
+            faulty_vnf['short_id'] = backup_device['short_id']
+            faulty_vnf['device_id'] = backup_device['id']
+            faulty_vnf['ip'] = backup_device['ip']
+
+            # remove used backup
+            del faulty_vnf['recovery']['backups'][0]
+
+            # TODO: insert new backup --> should be done asynchronously
+            #faulty_vnf['recovery']['backups'].append(new_device)
+
+            update_db('replace', 'vnf', faulty_vnf['id'], faulty_vnf)
+
+        elif recovery_method == 'multisync':
+            pass
 
     def mainloop(self):
         """Periodically monitors each virtual device."""

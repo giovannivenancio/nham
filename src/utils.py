@@ -48,8 +48,8 @@ def remove_db(db, id):
             if id not in entry:
                 db_conn.write(entry)
 
-def update_db(db, db_id, new_entry):
-    """Update an entry from a database.
+def update_db(db, action, entry_id, new_data):
+    """Append an entry in a item from database.
     Mostly used by the State Manager."""
 
     with open(get_db_path(db), 'r') as old_db:
@@ -59,8 +59,11 @@ def update_db(db, db_id, new_entry):
         entry = data[i].strip("\n")
         id, old_content = entry.split(' ', 1)
 
-        if id == db_id:
-            data[i] = id + ' ' + old_content + ',' + new_entry + '\n'
+        if id == entry_id:
+            if action == 'append':
+                data[i] = id + ' ' + old_content + ',' + new_data + '\n'
+            elif action == 'replace':
+                data[i] = id + ' ' + new_data + '\n'
 
     with open(get_db_path(db), 'w') as db_conn:
         db_conn.writelines(data)

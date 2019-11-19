@@ -49,7 +49,7 @@ class StateManager():
         if not self.get_states(vnf_id):
             insert_db('state', vnf['id'], state_entry)
         else:
-            update_db('state', vnf['id'], str(state_entry))
+            update_db('append', 'state', vnf['id'], str(state_entry))
 
         # save VNF state to database
         pack_name = self._db_path + checkpoint_name + '_' + vnf_id + '.tar.gz'
