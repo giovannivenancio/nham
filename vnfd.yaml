@@ -15,7 +15,7 @@ topology_template:
         availability_zone: nova
 
     resiliency:
-      num_backups: 1
+      num_backups: 0
       vnf_level:
         type: active-active  # options: active-standby, active-active, None
         cooldown: 120         # apply only for active-active

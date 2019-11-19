@@ -134,8 +134,3 @@ class StateManager():
             args=(vnf,))
         sync_vnf.daemon = True
         sync_vnf.start()
-
-sm = StateManager()
-
-sm.export_vnf_state('AiG9nbKgXn7e5jFo')
-#sm.import_vnf_state('b5e5d99adb', 'vWIv89wd2sLLXa39', epoch=None)

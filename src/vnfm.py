@@ -36,12 +36,16 @@ class VNFManager():
         if num_backups >= 1:
             vnf_level = resil_requirements['vnf_level']
             infra_level = resil_requirements['infra_level']
+            vnf_level_type = vnf_level['type']
 
-            if vnf_level['type'] == 'active-active':
+            if vnf_level_type == 'active-active':
                 cooldown = vnf_level['cooldown']
 
             if infra_level['type'] == 'remote':
                 remote_site = infra_level['remote_site']
+        else:
+            vnf_level_type = None
+            cooldown = None
 
         # main virtual device for VNF
         device = self._vim.create_virtual_device(
@@ -51,8 +55,8 @@ class VNFManager():
             mem_size)
 
         # create backups
+        backups = []
         if num_backups >= 1:
-            backups = []
             for i in range(num_backups):
                 backup = self._vim.create_virtual_device(
                     virtual_device_type,
@@ -68,8 +72,8 @@ class VNFManager():
             'ip': device['ip'],
             'network_function': 'forwarder',
             'recovery': {
-                'method': vnf_level['type'],
-                'cooldown': cooldown if vnf_level['type'] == 'active-active' else None,
+                'method': vnf_level_type,
+                'cooldown': cooldown if vnf_level_type == 'active-active' else None,
                 'backups': backups
             },
             'timestamp': get_current_time()
