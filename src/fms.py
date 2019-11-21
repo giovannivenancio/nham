@@ -2,6 +2,7 @@ import time
 import os
 import sys
 
+from vim import *
 from utils import *
 from multiprocessing import Process
 
@@ -15,6 +16,7 @@ class FaultManagementSystem():
     """
 
     def __init__(self):
+        self._vim = VirtualizedInfrastructureManager()
         self.update_devices()
         self.fd = Process(target=self.mainloop)
         self.fd.start()
@@ -30,19 +32,29 @@ class FaultManagementSystem():
             health = self.check_health(device)
             #print "checking health of %s: %s" % (device['ip'], health)
 
-            if not health:
-                print "Fault found on device %s" % id
-                self.alarm(id)
+            if health not in ['running', 'paused']:
+               print "Fault found on device %s status = %s" % (id, health)
+               self.alarm(id)
 
     def update_devices(self):
-        """Update list of devices to be monitored."""
-        self.devices = load_db('device')
+        """Update list of devices to be monitored.
+        This function monitors only the master VNFs,
+        and not the backups."""
+
+        self.devices = {}
+
+        vnfs = load_db('vnf')
+
+        for vnf_id in vnfs:
+            device_id = vnfs[vnf_id]['device_id']
+            self.devices[device_id] = self._vim.get_virtual_device(device_id)
 
     def check_health(self, device):
         """Check the health of specified device.
         This function is used to verify if a VNF is up and running or is faulty."""
 
-        return not os.system("ping -q -c 1 -W 2 %s > /dev/null 2>&1" % device['ip'])
+        #return not os.system("ping -q -c 1 -W 2 %s > /dev/null 2>&1" % device['ip'])
+        return self._vim.get_status(device['id'])
 
     def alarm(self, device_id):
         """Upon failure, start fault isolation, recovery and reconfiguration."""
@@ -75,9 +87,6 @@ class FaultManagementSystem():
         # recovery from fault
         print "recovering VNF"
         self.recovery(sm, vim, faulty_vnf)
-
-        # reconfigure SFC
-        #self.reconfigure()
 
         print "successfully recovered VNF %s" % faulty_vnf['id']
 
@@ -209,6 +218,8 @@ class FaultManagementSystem():
             faulty_vnf['ip'] = vim.get_updated_ip(backup_device['id'])
             backup_device['ip'] = faulty_vnf['ip']
 
+            # docker pulls an IP from the pool, so
+            # update device ID with new IP
             update_db('replace', 'device', backup_device['id'], backup_device)
 
             # remove used backup
@@ -226,7 +237,6 @@ class FaultManagementSystem():
         """Periodically monitors each virtual device."""
 
         while True:
-            print "Monitoring..."
             self.update_devices()
             self.monitor()
             time.sleep(3)

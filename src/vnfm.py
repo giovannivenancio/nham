@@ -110,7 +110,7 @@ class VNFManager():
             else:
                 backup_msg = 'None'
 
-            print "%s backups: %s" % (" "*2, backup_msg)
+            print "%s backups (%s): %s" % (" "*2, vnfs[id]['recovery']['method'], backup_msg)
 
     def get_vnf(self, vnf_id):
         """Get information from a specific device."""

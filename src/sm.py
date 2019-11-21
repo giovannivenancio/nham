@@ -28,7 +28,6 @@ class StateManager():
         virtual_device = self._vim.get_virtual_device(vnf['device_id'])
 
         checkpoint_name = 'checkpoint_%s' % generate_id()
-
         checkpoint_cmd = 'docker checkpoint create --leave-running=true %s %s' % (vnf['device_id'], checkpoint_name)
 
         try:
@@ -46,14 +45,17 @@ class StateManager():
         }
 
         if not self.get_states(vnf_id):
-            insert_db('state', vnf['id'], state_entry)
+            insert_db('state', vnf['id'], [state_entry])
         else:
-            update_db('append', 'state', vnf['id'], str(state_entry))
+            update_db('append', 'state', vnf['id'], [state_entry])
 
         # save VNF state to database
         pack_name = self._db_path + checkpoint_name + '_' + vnf_id + '.tar.gz'
         pack_cmd = 'sudo tar cvzf %s -C /var/lib/docker/containers/%s/checkpoints/%s . >/dev/null 2>&1' % (pack_name, virtual_device['id'], checkpoint_name)
-        os.system(pack_cmd)
+        try:
+            os.system(pack_cmd)
+        except:
+            print "erro no empacotamento"
 
     def import_vnf_state(self, destination, source, epoch):
         """Import a state to a VNF. If epoch is None, the latest will be used.
@@ -73,7 +75,14 @@ class StateManager():
                 if state['timestamp'] == epoch:
                     checkpoint_name = state['checkpoint']
         else:
-            checkpoint_name = states[-1]['checkpoint']
+            # Get last checkpoint
+            # WORKAROUND: if VNF has more than one state we need to
+            # extract the state from the list (e.g. [0]), otherwise
+            # if it has only one state, this state is not on a list
+            try:
+                checkpoint_name = states[-1][0]['checkpoint']
+            except:
+                checkpoint_name = states[-1]['checkpoint']
 
         pack_name = self._db_path + checkpoint_name + '_' + source + '.tar.gz'
 
@@ -82,7 +91,15 @@ class StateManager():
         os.system(unpack_cmd)
 
         restore_cmd = "docker start --checkpoint %s %s" % (checkpoint_name, destination['id'])
+
+        print "DEBUG:", restore_cmd
         os.system(restore_cmd)
+
+        # something goes wrong, just start container with the previous state
+        if self._vim.get_status(destination['id']) not in ['running', 'paused', 'created']:
+            print "error on checkpoint, rollbacking to previous state"
+            restore_cmd = "docker start %s" % destination['id']
+            os.system(restore_cmd)
 
     def list_states(self):
         """List all saved states from all VNFs."""
@@ -101,7 +118,7 @@ class StateManager():
 
         for id in states:
             if id == vnf_id:
-                return states[id]
+                return list(states[id])
         return None
 
     def spawn_sync_state(self, vnf):
@@ -144,3 +161,10 @@ class StateManager():
             args=(vnf,))
         sync_vnf.daemon = True
         sync_vnf.start()
+
+# sm = StateManager()
+# states = sm.get_states('FY7HcAcweMys6jtH')
+# try:
+#     print states[-1][0]['checkpoint']
+# except:
+#     print states[-1]['checkpoint']
