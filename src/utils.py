@@ -61,9 +61,9 @@ def update_db(action, db, entry_id, new_data):
 
         if id == entry_id:
             if action == 'append':
-                data[i] = id + ' ' + old_content + ',' + new_data + '\n'
+                data[i] = id + ' ' + old_content + ',' + str(new_data) + '\n'
             elif action == 'replace':
-                data[i] = id + ' ' + new_data + '\n'
+                data[i] = id + ' ' + str(new_data) + '\n'
 
     with open(get_db_path(db), 'w') as db_conn:
         db_conn.writelines(data)

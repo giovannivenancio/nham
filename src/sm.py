@@ -110,6 +110,7 @@ class StateManager():
         import time
 
         vnf_id = vnf['id']
+        recovery_method = vnf['recovery']['method']
         cooldown = int(vnf['recovery']['cooldown'])
         backups = vnf['recovery']['backups']
 
@@ -117,10 +118,22 @@ class StateManager():
             # create a checkpoint
             self.export_vnf_state(vnf_id)
 
-            # import checkpoint into backups
-            for backup in backups:
-                self.import_vnf_state(destination=backup, source=vnf_id, epoch=None)
+            if recovery_method == 'active-active':
+                # import checkpoint into backup
+                self.import_vnf_state(
+                    destination=backups[0],
+                    source=vnf_id,
+                    epoch=None)
 
+            elif recovery_method == 'multisync':
+                # import checkpoint into backups
+                for backup in backups:
+                    self.import_vnf_state(
+                        destination=backup,
+                        source=vnf_id,
+                        epoch=None)
+
+            # sync every "cooldown" time interval
             time.sleep(cooldown)
 
     def sync_state(self, vnf):

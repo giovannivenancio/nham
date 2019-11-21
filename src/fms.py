@@ -20,7 +20,6 @@ class FaultManagementSystem():
         self.fd.start()
 
     def _exit(self):
-        print "EXITING FD"
         self.fd.terminate()
 
     def monitor(self):
@@ -49,7 +48,10 @@ class FaultManagementSystem():
         """Upon failure, start fault isolation, recovery and reconfiguration."""
 
         from vim import VirtualizedInfrastructureManager
+        from sm import StateManager
+
         vim = VirtualizedInfrastructureManager()
+        sm = StateManager()
 
         vnfs = load_db('vnf')
         sfcs = load_db('sfc')
@@ -71,7 +73,8 @@ class FaultManagementSystem():
         self.isolation(vim, faulty_sfc, faulty_vnf)
 
         # recovery from fault
-        self.recovery(vim, faulty_vnf)
+        print "recovering VNF"
+        self.recovery(sm, vim, faulty_vnf)
 
         # reconfigure SFC
         #self.reconfigure()
@@ -85,6 +88,7 @@ class FaultManagementSystem():
 
         # if a SFC has only one SFC, there is no need to isolate
         if len(faulty_sfc['chain']) == 1:
+            print "SFC has only one VNF, no need to isolate"
             return
 
         # locate the fault position in the chain
@@ -131,43 +135,46 @@ class FaultManagementSystem():
             vim.exec_cmd(previous_device_id, forward_drop)
             vim.exec_cmd(previous_device_id, nat_drop)
 
-    def recovery(self, vim, faulty_sfc, faulty_vnf):
+    def recovery(self, sm, vim, faulty_vnf):
         """Recover VNF from fault."""
 
         recovery_method = faulty_vnf['recovery']['method']
 
+        # VNF doesn't have a backup, create a
+        # new instance and import state
         if recovery_method == None:
             # stop and remove "master" VNF
-            vim.delete_virtual_device(faulty_vnf['id'])
+            vim.delete_virtual_device(faulty_vnf['device_id'])
 
-            vdu = faulty_vnf['vnfd']['topology_template']['node_templates']['VDU1']
-            resources = vdu['capabilities']['nfv_compute']['properties']
-
-            virtual_device_type = vdu['properties']['type']
-            image = vdu['properties']['image']
-            num_cpus = resources['num_cpus']
-            mem_size = resources['mem_size']
+            image = faulty_vnf['properties']['image']
+            num_cpus = faulty_vnf['properties']['num_cpus']
+            mem_size = faulty_vnf['properties']['mem_size']
 
             # create new virtual device for VNF
             new_device = vim.create_virtual_device(
-                virtual_device_type,
+                'container',
                 image,
                 num_cpus,
                 mem_size)
 
-            # TODO: import vnf state...
+            sm.import_vnf_state(destination=new_device, source=faulty_vnf['id'], epoch=None)
 
             self.reconfigure(recovery_method, faulty_vnf, new_device)
 
+        # VNF has a standby backup, remove the
+        # faulty VNF and import state
         elif recovery_method == 'active-standby':
             # stop and remove "master" VNF
             vim.delete_virtual_device(faulty_vnf['id'])
 
-            # TODO: create new backup in background
-            # TODO: import vnf state
+            backup = faulty_vnf['recovery']['backups'][0]
+            sm.import_vnf_state(destination=backup, source=faulty_vnf['id'], epoch=None)
 
+            # TODO: create new backup in background
             self.reconfigure(recovery_method, faulty_vnf, None)
 
+        # VNF has an active backup, remove the
+        # faulty VNF and create a new backup
         elif recovery_method == 'active-active':
             # stop and remove "master" VNF
             vim.delete_virtual_device(faulty_vnf['id'])

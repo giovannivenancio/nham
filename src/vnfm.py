@@ -1,7 +1,6 @@
 import yaml
 
 from vim import *
-#from sm import *
 from utils import *
 
 class VNFManager():
@@ -32,20 +31,17 @@ class VNFManager():
         num_cpus = resources['num_cpus']
         mem_size = resources['mem_size']
         num_backups = resil_requirements['num_backups']
+        cooldown = resil_requirements['cooldown']
 
         if num_backups >= 1:
             vnf_level = resil_requirements['vnf_level']
             infra_level = resil_requirements['infra_level']
             vnf_level_type = vnf_level['type']
 
-            if vnf_level_type == 'active-active':
-                cooldown = vnf_level['cooldown']
-
             if infra_level['type'] == 'remote':
                 remote_site = infra_level['remote_site']
         else:
             vnf_level_type = None
-            cooldown = None
 
         # main virtual device for VNF
         device = self._vim.create_virtual_device(
@@ -70,10 +66,15 @@ class VNFManager():
             'short_id': device['short_id'],
             'device_id': device['id'],
             'ip': device['ip'],
+            'properties': {
+                'image': image,
+                'num_cpus': num_cpus,
+                'mem_size': mem_size
+            },
             'network_function': 'forwarder',
             'recovery': {
                 'method': vnf_level_type,
-                'cooldown': cooldown if vnf_level_type == 'active-active' else None,
+                'cooldown': cooldown,
                 'backups': backups
             },
             'timestamp': get_current_time()
@@ -92,6 +93,7 @@ class VNFManager():
 
         for id in vnfs:
             print "[VNF] [%s] [%s] [%s] [%s]" % (id, vnfs[id]['network_function'], self._vim.get_status(vnfs[id]['device_id']), vnfs[id]['timestamp'])
+            print "%s virtual device: %s" % (" "*2, vnfs[id]['short_id'])
             print "%s backups: %s" % (" "*2, vnfs[id]['recovery']['backups'])
         print ""
 
