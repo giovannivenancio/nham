@@ -14,13 +14,14 @@ signal.signal(signal.SIGINT, exit_handler)
 
 fms = FaultManagementSystem()
 sm = StateManager()
+vnfm = VNFManager()
 
 sync_vnfs = []
 
 while True:
     vnf = load_db('vnf')
 
-    print "sync vnfs: ", sync_vnfs
+    #print "sync vnfs: ", sync_vnfs
 
     for id in vnf:
         if id not in sync_vnfs:

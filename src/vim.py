@@ -16,9 +16,7 @@ class VirtualizedInfrastructureManager():
             image,
             detach=True,
             cap_add=['NET_ADMIN'],
-            #security_opt=['seccomp:unconfined'],
             stdin_open=True,
-            #tty=True,
             cpu_count=num_cpus,
             mem_limit=mem_size)
 
@@ -26,7 +24,7 @@ class VirtualizedInfrastructureManager():
             'id': container.id,
             'short_id': container.short_id,
             'image': container.image.tags[0],
-            'ip': self._docker.containers.get(container.id).attrs['NetworkSettings']['IPAddress'],
+            'ip': self.get_updated_ip(container.id),
             'num_cpus': num_cpus,
             'mem_size': mem_size
         }
@@ -34,6 +32,11 @@ class VirtualizedInfrastructureManager():
         insert_db('device', device['id'], device)
 
         return device
+
+    def get_updated_ip(self, device_id):
+        """Get updated IP address."""
+
+        return self._docker.containers.get(device_id).attrs['NetworkSettings']['IPAddress']
 
     def list_virtual_devices(self):
         """List all virtual devices."""

@@ -92,10 +92,25 @@ class VNFManager():
         vnfs = load_db('vnf')
 
         for id in vnfs:
-            print "[VNF] [%s] [%s] [%s] [%s]" % (id, vnfs[id]['network_function'], self._vim.get_status(vnfs[id]['device_id']), vnfs[id]['timestamp'])
+            try:
+                status = self._vim.get_status(vnfs[id]['device_id'])
+            except:
+                status = 'exited'
+
+            print "[VNF] [%s] [%s] [%s] [%s]" % (id, vnfs[id]['network_function'], status, vnfs[id]['timestamp'])
             print "%s virtual device: %s" % (" "*2, vnfs[id]['short_id'])
-            print "%s backups: %s" % (" "*2, vnfs[id]['recovery']['backups'])
-        print ""
+            print "%s IP: %s" % (" "*2, vnfs[id]['ip'])
+
+            backups = vnfs[id]['recovery']['backups']
+            backups_short_ids = []
+            if len(backups) >= 1:
+                for backup in backups:
+                    backups_short_ids.append(backup['short_id'])
+                backup_msg = ' ,'.join(backups_short_ids)
+            else:
+                backup_msg = 'None'
+
+            print "%s backups: %s" % (" "*2, backup_msg)
 
     def get_vnf(self, vnf_id):
         """Get information from a specific device."""

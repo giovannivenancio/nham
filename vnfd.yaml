@@ -15,10 +15,10 @@ topology_template:
         availability_zone: nova
 
     resiliency:
-      num_backups: 0
+      num_backups: 1
       cooldown: 5
       vnf_level:
-        type: active-active  # options: active-standby, active-active, None
+        type: active-standby  # options: active-standby, active-active, multisync
       infra_level:
         type: local           # options: local, remote, None
         remote_site: x.y.z.w  # apply only for remote
