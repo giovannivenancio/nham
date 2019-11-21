@@ -13,19 +13,19 @@ def exit_handler(signal, frame):
 
 signal.signal(signal.SIGINT, exit_handler)
 
-fms = FaultManagementSystem()
-#sm = StateManager()
+#fms = FaultManagementSystem()
+sm = StateManager()
 
-#sync_vnfs = []
+sync_vnfs = []
 
 while True:
-    # vnf = load_db('vnf')
-    #
-    # print "sync vnfs: ", sync_vnfs
-    #
-    # for id in vnf:
-    #     if id not in sync_vnfs and vnf[id]['recovery']['method'] == 'active-active':
-    #         sm.sync_state(vnf[id])
-    #         sync_vnfs.append(id)
+    vnf = load_db('vnf')
+
+    print "sync vnfs: ", sync_vnfs
+
+    for id in vnf:
+        if id not in sync_vnfs and vnf[id]['recovery']['method'] == 'active-active':
+            sm.sync_state(vnf[id])
+            sync_vnfs.append(id)
 
     time.sleep(3)

@@ -48,7 +48,7 @@ def remove_db(db, id):
             if id not in entry:
                 db_conn.write(entry)
 
-def update_db(db, action, entry_id, new_data):
+def update_db(action, db, entry_id, new_data):
     """Append an entry in a item from database.
     Mostly used by the State Manager."""
 

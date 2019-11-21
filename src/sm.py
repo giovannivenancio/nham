@@ -32,7 +32,6 @@ class StateManager():
         checkpoint_cmd = 'docker checkpoint create --leave-running=true %s %s' % (vnf['device_id'], checkpoint_name)
 
         try:
-            print ' '.join(['docker', 'checkpoint', 'create', '--leave-running=true', vnf['device_id'], checkpoint_name])
             res = check_output(
                 ['docker', 'checkpoint', 'create', '--leave-running=true', vnf['device_id'], checkpoint_name],
                 stderr=open(os.devnull, 'w'))
@@ -66,7 +65,7 @@ class StateManager():
         epoch: timestamp
         """
 
-        self._vim.stop_virtual_device(destination)
+        self._vim.stop_virtual_device(destination['id'])
         states = self.get_states(source)
 
         if epoch:
@@ -78,11 +77,11 @@ class StateManager():
 
         pack_name = self._db_path + checkpoint_name + '_' + source + '.tar.gz'
 
-        target_dir = '/var/lib/docker/containers/%s/checkpoints/%s' % (destination, checkpoint_name)
+        target_dir = '/var/lib/docker/containers/%s/checkpoints/%s' % (destination['id'], checkpoint_name)
         unpack_cmd = 'sudo mkdir -p %s && sudo tar -C %s -xvf %s >/dev/null 2>&1' % (target_dir, target_dir, pack_name)
         os.system(unpack_cmd)
 
-        restore_cmd = "docker start --checkpoint %s %s" % (checkpoint_name, destination)
+        restore_cmd = "docker start --checkpoint %s %s" % (checkpoint_name, destination['id'])
         os.system(restore_cmd)
 
     def list_states(self):
@@ -106,7 +105,7 @@ class StateManager():
         return None
 
     def spawn_sync_state(self, vnf):
-        """."""
+        """Periodically synchronizes the internal state of a VNF with its backup."""
 
         import time
 
@@ -115,16 +114,14 @@ class StateManager():
         backups = vnf['recovery']['backups']
 
         while True:
-            print "------------\nimporting state to %s every %s seconds\n------------\n" % (backups, cooldown)
-
             # create a checkpoint
             self.export_vnf_state(vnf_id)
 
             # import checkpoint into backups
-            self.import_vnf_state(destination=backup, source=vnf_id, epoch=None)
+            for backup in backups:
+                self.import_vnf_state(destination=backup, source=vnf_id, epoch=None)
 
-            time.sleep(3)
-            #time.sleep(cooldown)
+            time.sleep(cooldown)
 
     def sync_state(self, vnf):
         """Create a job to sync internal state of active-active replication VNFs."""
