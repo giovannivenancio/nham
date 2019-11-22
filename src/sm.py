@@ -148,7 +148,7 @@ class StateManager():
             # if VNF doesn't have more backups, it
             # doesn't have to update the backup state
             print "backups of %s: %s" % (vnf['id'], vnf['recovery']['backups'])
-            if not vnf['recovery']['backups']:
+            if vnf['recovery']['method'] in ['active-active', 'active-standby'] and not vnf['recovery']['backups']:
                 print "no more backups, exiting..."
                 return
 
