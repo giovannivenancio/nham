@@ -145,10 +145,23 @@ class VNFManager():
         self._vim.purge_devices()
 
         vnfs = load_db('vnf')
+        states = load_db('state')
+        recovering = load_db('recovering')
 
         for id in vnfs:
             try:
-                remove_db('state', id)
                 remove_db('vnf', id)
+            except:
+                pass
+
+        for id in states:
+            try:
+                remove_db('state', id)
+            except:
+                pass
+
+        for id in recovering:
+            try:
+                remove_db('recovering', id)
             except:
                 pass

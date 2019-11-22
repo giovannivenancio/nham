@@ -8,6 +8,7 @@ DB_DEVICE = '../db/device'
 DB_VNF = '../db/vnf'
 DB_SFC = '../db/sfc'
 DB_STATE = '../db/state'
+DB_RECOVERING = '../db/recovering'
 
 def generate_id():
     """Generate a unique 16-byte ID."""
@@ -28,6 +29,8 @@ def get_db_path(db):
         return DB_SFC
     elif db == 'state':
         return DB_STATE
+    elif db == 'recovering':
+        return DB_RECOVERING
 
 def insert_db(db, id, content):
     """Insert a new entry on the database."""
@@ -79,8 +82,8 @@ def load_db(db):
     for entry in entries:
         entry = entry.strip("\n")
         id, content = entry.split(' ', 1)
+        
         content = ast.literal_eval(content)
-
         data[id] = content
 
     return data

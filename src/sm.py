@@ -132,6 +132,26 @@ class StateManager():
         backups = vnf['recovery']['backups']
 
         while True:
+
+            # get updated VNF instance
+            vnfs = load_db('vnf')
+            recovering = load_db('recovering')
+
+            for id in vnfs:
+                if vnfs[id] == vnf_id:
+                    vnf = vnfs[id]
+
+            if vnf['id'] in recovering:
+                print "recovering VNF, exiting"
+                return
+
+            # if VNF doesn't have more backups, it
+            # doesn't have to update the backup state
+            print "backups of %s: %s" % (vnf['id'], vnf['recovery']['backups'])
+            if not vnf['recovery']['backups']:
+                print "no more backups, exiting..."
+                return
+
             # create a checkpoint
             self.export_vnf_state(vnf_id)
 
