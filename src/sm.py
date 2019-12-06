@@ -67,8 +67,13 @@ class StateManager():
         epoch: timestamp
         """
 
+        import time
+
+        start = time.time()
         self._vim.stop_virtual_device(destination['id'])
         states = self.get_states(source)
+        end = time.time()
+        pause_time = end-start
 
         if epoch:
             for state in states:
@@ -100,6 +105,8 @@ class StateManager():
             print "error on checkpoint, rollbacking to previous state"
             restore_cmd = "docker start %s" % destination['id']
             os.system(restore_cmd)
+
+        return pause_time
 
     def list_states(self):
         """List all saved states from all VNFs."""
@@ -142,7 +149,6 @@ class StateManager():
                     vnf = vnfs[id]
 
             if vnf['id'] in recovering:
-                print "recovering VNF, exiting"
                 return
 
             # if VNF doesn't have more backups, it

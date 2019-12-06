@@ -99,7 +99,12 @@ class VNFManager():
 
             print "[VNF] [%s] [%s] [%s] [%s]" % (id, vnfs[id]['network_function'], status, vnfs[id]['timestamp'])
             print "%s virtual device: %s" % (" "*2, vnfs[id]['short_id'])
-            print "%s IP: %s" % (" "*2, vnfs[id]['ip'])
+
+            if vnfs[id]['recovery']['method'] == 'multisync':
+                
+                print "%s IP: %s" % (" "*2, vnfs[id]['ip'])
+            else:
+                print "%s IP: %s" % (" "*2, vnfs[id]['ip'])
 
             backups = vnfs[id]['recovery']['backups']
             backups_short_ids = []

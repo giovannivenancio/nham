@@ -1,6 +1,7 @@
 import time
 import sys
 import signal
+import os
 
 from fms import *
 from vnfm import *
@@ -11,6 +12,8 @@ def exit_handler(signal, frame):
     sys.exit(0)
 
 signal.signal(signal.SIGINT, exit_handler)
+
+print "########### DEBUG - PID:", os.getpid()
 
 fms = FaultManagementSystem()
 sm = StateManager()

@@ -94,7 +94,11 @@ class FaultManagementSystem():
 
         # recovery from fault
         print "recovering VNF"
-        self.recovery(sm, vim, faulty_vnf)
+        runtime = self.recovery(sm, vim, faulty_vnf)
+
+        print "========================================="
+        print "Total recovery time: %s" % str(runtime).replace('.', ',')
+        print "========================================="
 
         print "successfully recovered VNF %s" % faulty_vnf['id']
         remove_db('recovering', faulty_vnf['id'])
@@ -158,28 +162,39 @@ class FaultManagementSystem():
     def recovery(self, sm, vim, faulty_vnf):
         """Recover VNF from fault."""
 
+        runtime = 0
+
         recovery_method = faulty_vnf['recovery']['method']
 
         # VNF doesn't have a backup, create a
         # new instance and import state
         if recovery_method == None:
             # stop and remove "master" VNF
+            print "removing faulty virtual device"
             vim.delete_virtual_device(faulty_vnf['device_id'])
+
+            start = time.time()
 
             image = faulty_vnf['properties']['image']
             num_cpus = faulty_vnf['properties']['num_cpus']
             mem_size = faulty_vnf['properties']['mem_size']
 
             # create new virtual device for VNF
+            print "creating new virtual device"
             new_device = vim.create_virtual_device(
                 'container',
                 image,
                 num_cpus,
                 mem_size)
 
+            print "importing updated state"
             sm.import_vnf_state(destination=new_device, source=faulty_vnf['id'], epoch=None)
 
+            print "reconfiguring"
             self.reconfigure(vim, recovery_method, faulty_vnf, new_device)
+
+            end = time.time()
+            runtime += end-start
 
         # VNF has a standby backup, remove the
         # faulty VNF and import state
@@ -187,12 +202,19 @@ class FaultManagementSystem():
             # stop and remove "master" VNF
             vim.delete_virtual_device(faulty_vnf['device_id'])
 
+            start = time.time()
+
             backup = faulty_vnf['recovery']['backups'][0]
-            sm.import_vnf_state(destination=backup, source=faulty_vnf['id'], epoch=None)
+            print "importing updated state"
+            pause_time = sm.import_vnf_state(destination=backup, source=faulty_vnf['id'], epoch=None)
+            print "tempo de pausa =", pause_time
 
             # TODO: create new backup in background
 
             self.reconfigure(vim, recovery_method, faulty_vnf, None)
+
+            end = time.time()
+            runtime += end-start-pause_time
 
         # VNF has an active backup, remove the
         # faulty VNF and create a new backup
@@ -201,13 +223,26 @@ class FaultManagementSystem():
             print "deleting %s" % faulty_vnf['device_id']
             vim.delete_virtual_device(faulty_vnf['device_id'])
 
+            start = time.time()
+
             # TODO: create new backup in background
 
             self.reconfigure(vim, recovery_method, faulty_vnf, None)
 
+            end = time.time()
+            runtime += end-start
+
         elif recovery_method == 'multisync':
+
+            start = time.time()
+
             # reconfigure
-            pass
+            self.reconfigure(vim, recovery_method, faulty_vnf, None)
+
+            end = time.time()
+            runtime += end-start
+
+        return runtime
 
     def reconfigure(self, vim, recovery_method, faulty_vnf, new_device):
         """After fault recovery, reconfigure VNF and SFC."""
@@ -255,7 +290,10 @@ class FaultManagementSystem():
                     break
 
         elif recovery_method == 'multisync':
-            pass
+            backup_device = faulty_vnf['recovery']['backups'][0]
+            # remove used backup
+            del faulty_vnf['recovery']['backups'][0]
+            update_db('replace', 'vnf', faulty_vnf['id'], faulty_vnf)
 
     def mainloop(self):
         """Periodically monitors each virtual device."""
