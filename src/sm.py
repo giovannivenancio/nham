@@ -187,10 +187,3 @@ class StateManager():
             args=(vnf,))
         sync_vnf.daemon = True
         sync_vnf.start()
-
-# sm = StateManager()
-# states = sm.get_states('FY7HcAcweMys6jtH')
-# try:
-#     print states[-1][0]['checkpoint']
-# except:
-#     print states[-1]['checkpoint']
