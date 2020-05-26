@@ -1,3 +1,4 @@
+set encoding "utf8"
 #set terminal pngcairo nocrop enhanced font "verdana,16" size 1920,1080
 set terminal postscript eps enhanced color font 'verdana,24'
 #set output "recovery.png"
@@ -14,10 +15,11 @@ set style fill solid border -1
 set format xy "%g"
 set tic scale 0
 
-set xlabel "Resiliency Mechanism"
+#set xlabel "Resiliency Mechanism"
+set xlabel "Mecanismos de Resiliência"
 #set xtics nomirror
 
-set ylabel "Average Recovery Time (s)"
+set ylabel "Tempo Médio de Recuperação (s)"
 set logscale y
 set grid ytics lw 1 lc rgb "#505050"
 set yrange [0.0001:10]

@@ -1,3 +1,4 @@
+set encoding "utf8"
 #set terminal pngcairo nocrop enhanced font "verdana,16" size 1920,1080
 set terminal postscript eps enhanced color font 'verdana,24'
 #set output "resiliency_performance.png"
@@ -17,10 +18,12 @@ set style fill solid border -1
 set boxwidth 0.9
 set tic scale 0
 
-set xlabel "Checkpoint Interval (ms)"
+#set xlabel "Checkpoint Interval (ms)"
+set xlabel "Intervalo de Checkpoint (ms)"
 set xtics nomirror
 
-set ylabel "Average CPU Usage (%)"
+#set ylabel "Average CPU Usage (%)"
+set ylabel "Uso Médio de CPU (%)"
 set grid ytics lw 1 lc rgb "#505050"
 set yrange [0:100]
 set ytics 10
