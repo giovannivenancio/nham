@@ -1,172 +1,213 @@
-import yaml
+#!/usr/bin/env python
 
-from vim import *
+"""
+VNF Manager implementation.
+"""
+
+import yaml
+import requests
+from eve import Eve
+from flask import request, jsonify
 from utils import *
 
-class VNFManager():
-    """
-    VNF Manager implementation.
-    """
+app = Eve()
+VIM_URL = 'http://0.0.0.0:9000/vim/'
 
-    def __init__(self):
-        self._vim = VirtualizedInfrastructureManager()
-        #self._sm = StateManager()
+@app.route('/vnf/create', methods=['POST'])
+def create_vnf():
+    """Create a VNF."""
 
-    def create_vnf(self, vnfd_file):
-        """Create a VNF."""
+    vnfd_file = request.json['vnfd_file']
 
-        with open(vnfd_file, 'r') as stream:
-            try:
-                vnfd = yaml.safe_load(stream)
-            except yaml.YAMLError as exc:
-                print "error", exc
-                return
+    with open(vnfd_file, 'r') as stream:
+        try:
+            vnfd = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print "error", exc
+            return
 
-        vdu = vnfd['topology_template']['node_templates']['VDU1']
-        resil_requirements = vnfd['topology_template']['node_templates']['resiliency']
-        resources = vdu['capabilities']['nfv_compute']['properties']
+    vdu = vnfd['topology_template']['node_templates']['VDU1']
+    resil_requirements = vnfd['topology_template']['node_templates']['resiliency']
+    resources = vdu['capabilities']['nfv_compute']['properties']
 
-        virtual_device_type = vdu['properties']['type']
-        image = vdu['properties']['image']
-        num_cpus = resources['num_cpus']
-        mem_size = resources['mem_size']
-        num_backups = resil_requirements['num_backups']
-        cooldown = resil_requirements['cooldown']
+    virtual_device_type = vdu['properties']['type']
+    image = vdu['properties']['image']
+    num_cpus = resources['num_cpus']
+    mem_size = resources['mem_size']
+    num_backups = resil_requirements['num_backups']
+    cooldown = resil_requirements['cooldown']
 
-        if num_backups >= 1:
-            vnf_level = resil_requirements['vnf_level']
-            infra_level = resil_requirements['infra_level']
-            vnf_level_type = vnf_level['type']
+    if num_backups >= 1:
+        vnf_level = resil_requirements['vnf_level']
+        infra_level = resil_requirements['infra_level']
+        vnf_level_type = vnf_level['type']
 
-            if infra_level['type'] == 'remote':
-                remote_site = infra_level['remote_site']
-        else:
-            vnf_level_type = None
+        if infra_level['type'] == 'remote':
+            remote_site = infra_level['remote_site']
+    else:
+        vnf_level_type = None
 
-        # main virtual device for VNF
-        device = self._vim.create_virtual_device(
-            virtual_device_type,
-            image,
-            num_cpus,
-            mem_size)
+    # main virtual device for VNF
+    r = requests.post(VIM_URL + 'create', json={
+        'type': virtual_device_type,
+        'image': image,
+        'num_cpus': num_cpus,
+        'mem_size': mem_size
+    })
 
-        # create backups
-        backups = []
-        if num_backups >= 1:
-            for i in range(num_backups):
-                backup = self._vim.create_virtual_device(
-                    virtual_device_type,
-                    image,
-                    num_cpus,
-                    mem_size)
-                backups.append(backup)
+    device = r.json()['device']
 
-        vnf = {
-            'id': generate_id(),
-            'short_id': device['short_id'],
-            'device_id': device['id'],
-            'ip': device['ip'],
-            'properties': {
+    # create backups
+    backups = []
+    if num_backups >= 1:
+        for i in range(num_backups):
+            r = requests.post(VIM_URL + 'create', json={
+            'type': virtual_device_type,
                 'image': image,
                 'num_cpus': num_cpus,
                 'mem_size': mem_size
-            },
-            'network_function': 'forwarder',
-            'recovery': {
-                'method': vnf_level_type,
-                'cooldown': cooldown,
-                'backups': backups
-            },
-            'timestamp': get_current_time()
-        }
+            })
 
-        insert_db('vnf', vnf['id'], vnf)
+            backup = r.json()['device']
+            backups.append(backup)
 
-        print "VNF created: %s" % vnf['id']
+    vnf = {
+        'id': generate_id(),
+        'short_id': device['short_id'],
+        'device_id': device['id'],
+        'ip': device['ip'],
+        'properties': {
+            'image': image,
+            'num_cpus': num_cpus,
+            'mem_size': mem_size
+        },
+        'network_function': 'forwarder',
+        'recovery': {
+            'method': vnf_level_type,
+            'cooldown': cooldown,
+            'backups': backups
+        },
+        'timestamp': get_current_time()
+    }
 
-        return vnf
+    insert_db('vnf', vnf['id'], vnf)
 
-    def list_vnfs(self):
-        """List all VNFs."""
+    return jsonify({'vnf': vnf})
 
-        vnfs = load_db('vnf')
+@app.route('/vnf/list', methods=['GET'])
+def list_vnfs():
+    """List all VNFs."""
 
-        for id in vnfs:
-            try:
-                status = self._vim.get_status(vnfs[id]['device_id'])
-            except:
-                status = 'exited'
+    vnfs = load_db('vnf')
 
-            print "[VNF] [%s] [%s] [%s] [%s]" % (id, vnfs[id]['network_function'], status, vnfs[id]['timestamp'])
-            print "%s virtual device: %s" % (" "*2, vnfs[id]['short_id'])
+    vnf_list = ''
 
-            if vnfs[id]['recovery']['method'] == 'multisync':
-                
-                print "%s IP: %s" % (" "*2, vnfs[id]['ip'])
-            else:
-                print "%s IP: %s" % (" "*2, vnfs[id]['ip'])
+    for id in vnfs:
+        try:
+            r = requests.get(VIM_URL + 'show', json={'id': vnfs[id]['device_id']})
+            status = r.text
+        except:
+            status = 'exited'
 
-            backups = vnfs[id]['recovery']['backups']
-            backups_short_ids = []
-            if len(backups) >= 1:
-                for backup in backups:
-                    backups_short_ids.append(backup['short_id'])
-                backup_msg = ' ,'.join(backups_short_ids)
-            else:
-                backup_msg = 'None'
+        vnf_list += "[VNF] [%s] [%s] [%s] [%s]\n" % (id, vnfs[id]['network_function'], status, vnfs[id]['timestamp'])
+        vnf_list += "%s virtual device: %s\n" % (" "*2, vnfs[id]['short_id'])
 
-            print "%s backups (%s): %s" % (" "*2, vnfs[id]['recovery']['method'], backup_msg)
+        if vnfs[id]['recovery']['method'] == 'multisync':
+            vnf_list += "%s IP: %s\n" % (" "*2, vnfs[id]['ip'])
+        else:
+            vnf_list += "%s IP: %s\n" % (" "*2, vnfs[id]['ip'])
 
-    def get_vnf(self, vnf_id):
-        """Get information from a specific device."""
+        backups = vnfs[id]['recovery']['backups']
+        backups_short_ids = []
 
-        vnfs = load_db('vnf')
+        if len(backups) >= 1:
+            for backup in backups:
+                backups_short_ids.append(backup['short_id'])
+            backup_msg = ' ,'.join(backups_short_ids)
+        else:
+            backup_msg = 'None'
 
-        for id in vnfs:
-            if id == vnf_id:
-                return vnfs[id]
+        vnf_list += "%s backups (%s): %s\n\n" % (" "*2, vnfs[id]['recovery']['method'], backup_msg)
 
-    def delete_vnf(self, vnf_id):
-        """Delete a VNF."""
+    return vnf_list
 
-        vnf = self.get_vnf(vnf_id)
-        self._vim.delete_virtual_device(vnf['device_id'])
+@app.route('/vnf/show', methods=['GET'])
+def get_vnf():
+    """Get information from a specific device."""
 
-        remove_db('vnf', vnf_id)
+    vnfs = load_db('vnf')
 
-        print "VNF deleted: %s" % vnf_id
+    vnf_id = request.json['vnf_id']
 
-    def stop_vnf(self, vnf_id):
-        """Stop a VNF."""
+    for id in vnfs:
+        if id == vnf_id:
+            return vnfs[id]
 
-        vnf = self.get_vnf(vnf_id)
-        self._vim.stop_virtual_device(vnf['device_id'])
+@app.route('/vnf/delete', methods=['DELETE'])
+def delete_vnf():
+    """Delete a VNF."""
 
-        print "VNF stopped: %s" % vnf_id
+    vnfs = load_db('vnf')
 
-    def purge_vnfs(self):
-        """Delete all VNFs."""
+    vnf_id = request.json['vnf_id']
 
-        self._vim.purge_devices()
+    # search for VNF
+    for id in vnfs:
+        if id == vnf_id:
+            vnf = vnfs[id]
 
-        vnfs = load_db('vnf')
-        states = load_db('state')
-        recovering = load_db('recovering')
+    r = requests.delete(VIM_URL + 'delete', json={'id': vnf['device_id']})
 
-        for id in vnfs:
-            try:
-                remove_db('vnf', id)
-            except:
-                pass
+    remove_db('vnf', vnf_id)
 
-        for id in states:
-            try:
-                remove_db('state', id)
-            except:
-                pass
+    return "VNF deleted: %s" % vnf_id
 
-        for id in recovering:
-            try:
-                remove_db('recovering', id)
-            except:
-                pass
+@app.route('/vnf/stop', methods=['POST'])
+def stop_vnf():
+    """Stop a VNF."""
+
+    vnfs = load_db('vnf')
+
+    vnf_id = request.json['vnf_id']
+
+    # search for VNF
+    for id in vnfs:
+        if id == vnf_id:
+            vnf = vnfs[id]
+
+    r = requests.post(VIM_URL + 'stop', json={'id': vnf['device_id']})
+
+    return "VNF stopped: %s" % vnf_id
+
+@app.route('/vnf/purge', methods=['DELETE'])
+def purge_vnfs():
+    """Delete all VNFs."""
+
+    r = requests.delete(VIM_URL + 'purge')
+
+    vnfs = load_db('vnf')
+    states = load_db('state')
+    recovering = load_db('recovering')
+
+    for id in vnfs:
+        try:
+            remove_db('vnf', id)
+        except:
+            pass
+
+    for id in states:
+        try:
+            remove_db('state', id)
+        except:
+            pass
+
+    for id in recovering:
+        try:
+            remove_db('recovering', id)
+        except:
+            pass
+
+    return "ok!"
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=9001)

@@ -41,7 +41,7 @@ def create_virtual_device():
 
     insert_db('device', device['id'], device)
 
-    return "ok!"
+    return jsonify({'device': device})
 
 def get_updated_ip(device_id):
     """Get updated IP address."""

@@ -7,11 +7,11 @@ topology_template:
       capabilities:
         nfv_compute:
           properties:
-            mem_size: 512 MB
+            mem_size: 256 MB
             num_cpus: 1
       properties:
         type: container
-        image: gvsouza/nham
+        image: ubuntu
         availability_zone: nova
 
     resiliency:
