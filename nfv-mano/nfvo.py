@@ -11,7 +11,7 @@ from utils import *
 
 app = Eve()
 VIM_URL = 'http://0.0.0.0:9000/vim/'
-VNF_URL = 'http://0.0.0.0:9001/vim/'
+VNF_URL = 'http://0.0.0.0:9001/vnf/'
 
 @app.route('/sfc/create', methods=['POST'])
 def create_sfc():
@@ -64,7 +64,7 @@ def list_sfcs():
 def get_sfc():
     """Get information from a specific SFC."""
 
-    sfc_id = requests.json['sfc_id']
+    sfc_id = request.json['sfc_id']
 
     sfcs = load_db('sfc')
 
@@ -76,7 +76,7 @@ def get_sfc():
 def delete_sfc():
     """Delete a SFC."""
 
-    sfc_id = requests.json['sfc_id']
+    sfc_id = request.json['sfc_id']
 
     sfcs = load_db('sfc')
 

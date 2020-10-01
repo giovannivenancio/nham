@@ -34,11 +34,10 @@ while True:
     print "15. SFC list"
     print "16. SFC show"
     print "17. SFC delete"
-    print "18. SFC stop"
-    print "19. SFC purge"
+    print "18. SFC purge"
     print ""
-    print "20. Reset DB"
-    print "21. Exit"
+    print "19. Reset DB"
+    print "20. Exit"
 
     opt = input("> ")
 
@@ -166,30 +165,61 @@ while True:
         print "SFC CREATE"
         print "----------------\n"
 
+        num_vnfs = input("Number of VNFs > ")
+        vnfd_file = '../vnfd.yaml'
+
+        r = requests.post(SFC_URL + 'create', json={'num_vnfs': num_vnfs, 'vnfd_file': vnfd_file})
+        print "\n", r.json(), "\n"
+
     elif opt == 15:
         print "----------------"
         print "SFC LIST"
         print "----------------\n"
+
+        r = requests.get(SFC_URL + 'list')
+        print "\n", r.text, "\n"
 
     elif opt == 16:
         print "----------------"
         print "SFC SHOW"
         print "----------------\n"
 
+        sfc_id = raw_input("> ")
+
+        r = requests.get(SFC_URL + 'show', json={'sfc_id': sfc_id})
+        print "\n", r.json(), "\n"
+
     elif opt == 17:
         print "----------------"
         print "SFC DELETE"
         print "----------------\n"
+
+        sfc_id = raw_input("> ")
+
+        r = requests.delete(SFC_URL + 'delete', json={'sfc_id': sfc_id})
+        print "\n", r.text, "\n"
 
     elif opt == 18:
         print "----------------"
         print "SFC PURGE"
         print "----------------\n"
 
+        r = requests.delete(SFC_URL + 'purge')
+        print "\n", r.text, "\n"
+
     elif opt == 19:
         print "----------------"
         print "RESET DB"
         print "----------------\n"
+
+        r = requests.delete(SFC_URL + 'purge')
+        print "\n", r.text, "\n"
+
+        r = requests.delete(VNF_URL + 'purge')
+        print "\n", r.text, "\n"
+
+        r = requests.delete(VIM_URL + 'purge')
+        print "\n", r.text, "\n"
 
     elif opt == 20:
         exit()

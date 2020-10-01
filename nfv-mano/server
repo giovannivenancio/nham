@@ -1,0 +1,52 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+	echo "Usage: ./server <start|stop|restart>"
+	exit
+fi
+
+if [ "$1" = "start" ]; then
+
+	echo "Initializing NFV-MANO components..."
+
+	python vim.py &> logs/vim.log &
+	echo "VIM OK!"
+
+	python vnfm.py &> logs/vnfm.log &
+	echo "VNFM OK!"
+
+	python nfvo.py &> logs/nfvo.log &
+	echo "NFVO OK!"
+
+elif [ "$1" = "stop" ]; then
+
+	echo "Stopping NFV-MANO components..."
+
+	pkill -f vim.py
+	echo "VIM stopped"
+
+	pkill -f vnfm.py
+	echo "VNFM stopped"
+
+	pkill -f nfvo.py
+	echo "NFVO stopped"
+
+elif [ "$1" = "restart" ]; then
+
+	echo "Restarting NFV-MANO components..."
+
+	pkill -f vim.py
+	python vim.py &> logs/vim.log &
+	echo "VIM OK!"
+
+	pkill -f vnfm.py
+	python vnfm.py &> logs/vnfm.log &
+	echo "VNFM OK!"
+
+	pkill -f nfvo.py
+	python nfvo.py &> logs/nfvo.log &
+	echo "NFVO OK!"
+
+else
+    echo "nothing to do here."
+fi

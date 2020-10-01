@@ -123,7 +123,7 @@ def list_vnfs():
         if len(backups) >= 1:
             for backup in backups:
                 backups_short_ids.append(backup['short_id'])
-            backup_msg = ' ,'.join(backups_short_ids)
+            backup_msg = ', '.join(backups_short_ids)
         else:
             backup_msg = 'None'
 
