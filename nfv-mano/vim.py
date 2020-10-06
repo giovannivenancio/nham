@@ -30,6 +30,8 @@ def create_virtual_device():
         cpu_count=num_cpus,
         mem_limit=mem_size)
 
+    container.exec_run('./sfc &', detach=True)
+
     device = {
         'id': container.id,
         'short_id': container.short_id,
@@ -122,6 +124,18 @@ def purge_devices():
             remove_db('device', id)
         except:
             pass
+
+    return "ok!"
+
+@app.route('/vim/run', methods=['POST'])
+def exec_cmd():
+    """Execute a command on the virtual device."""
+
+    v_id = request.json['id']
+    cmd = request.json['cmd']
+
+    container = dkr.containers.get(v_id)
+    container.exec_run(cmd, detach=True)
 
     return "ok!"
 

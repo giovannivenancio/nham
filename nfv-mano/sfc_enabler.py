@@ -25,6 +25,9 @@ if __name__ == "__main__":
             if not data:
                 break
 
+            # send data back to VNF
+            conn.send(data)
+
             del data
 
         return_message = "OK!\n"

@@ -11,11 +11,11 @@ topology_template:
             num_cpus: 1
       properties:
         type: container
-        image: ubuntu
+        image: alpine-nfv
         availability_zone: nova
 
     resiliency:
-      num_backups: 2
+      num_backups: 0
       cooldown: 1
       vnf_level:
         type: active-standby  # options: active-standby, active-active, MR-AA
