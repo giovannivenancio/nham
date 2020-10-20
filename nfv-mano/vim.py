@@ -25,7 +25,7 @@ def create_virtual_device():
     container = dkr.containers.run(
         image,
         detach=True,
-        cap_add=['NET_ADMIN'],
+        cap_add=['NET_ADMIN', 'SYS_PTRACE'],
         stdin_open=True,
         cpu_count=num_cpus,
         mem_limit=mem_size)

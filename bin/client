@@ -37,7 +37,8 @@ while True:
     print "18. SFC purge"
     print ""
     print "19. Reset DB"
-    print "20. Exit"
+    print "20. Exec"
+    print "21. Exit"
 
     opt = input("> ")
 
@@ -46,7 +47,7 @@ while True:
         print "VIM CREATE"
         print "----------------\n"
 
-        r = requests.post(VIM_URL + 'create', json={'type': 'container', 'image': 'ubuntu', 'num_cpus': 1, 'mem_size': '256MB'})
+        r = requests.post(VIM_URL + 'create', json={'type': 'container', 'image': 'alpine-nfv', 'num_cpus': 1, 'mem_size': '256MB'})
         print r.text
 
     elif opt == 2:
@@ -222,4 +223,15 @@ while True:
         print "\n", r.text, "\n"
 
     elif opt == 20:
+        print "----------------"
+        print "EXEC"
+        print "----------------\n"
+
+        id = raw_input("> ")
+        cmd = raw_input("> ")
+
+        r = requests.post(VIM_URL + 'run', json={'id': id, 'cmd': cmd})
+        print "\n", r.text, "\n"
+
+    elif opt == 21:
         exit()

@@ -11,6 +11,7 @@ from flask import request, jsonify
 from utils import *
 
 app = Eve()
+
 VIM_URL = 'http://0.0.0.0:9000/vim/'
 
 @app.route('/vnf/create', methods=['POST'])

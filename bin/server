@@ -9,13 +9,13 @@ if [ "$1" = "start" ]; then
 
 	echo "Initializing NFV-MANO components..."
 
-	python vim.py &> logs/vim.log &
+	python ../nfv-mano/vim.py &> ../nfv-mano/logs/vim.log &
 	echo "VIM OK!"
 
-	python vnfm.py &> logs/vnfm.log &
+	python ../nfv-mano/vnfm.py &> ../nfv-mano/logs/vnfm.log &
 	echo "VNFM OK!"
 
-	python nfvo.py &> logs/nfvo.log &
+	python ../nfv-mano/nfvo.py &> ../nfv-mano/logs/nfvo.log &
 	echo "NFVO OK!"
 
 elif [ "$1" = "stop" ]; then
@@ -36,15 +36,15 @@ elif [ "$1" = "restart" ]; then
 	echo "Restarting NFV-MANO components..."
 
 	pkill -f vim.py
-	python vim.py &> logs/vim.log &
+	python ../nfv-mano/vim.py &> ../nfv-mano/logs/vim.log &
 	echo "VIM OK!"
 
 	pkill -f vnfm.py
-	python vnfm.py &> logs/vnfm.log &
+	python ../nfv-mano/vnfm.py &> ../nfv-mano/logs/vnfm.log &
 	echo "VNFM OK!"
 
 	pkill -f nfvo.py
-	python nfvo.py &> logs/nfvo.log &
+	python ../nfv-mano/nfvo.py &> ../nfv-mano/logs/nfvo.log &
 	echo "NFVO OK!"
 
 else
