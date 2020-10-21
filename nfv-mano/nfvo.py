@@ -32,14 +32,6 @@ def create_sfc():
         'timestamp': get_current_time()
     }
 
-    # Create forwarding rules
-    # for i in range(len(chain[:-1])):
-    #     vnf = self._vnfm.get_vnf(chain[i])
-    #     next_hop = self._vnfm.get_vnf(chain[i+1])['ip']
-    #     forward_rule = 'iptables -t nat -A PREROUTING -p icmp -j DNAT --to-destination %s' % next_hop
-    #
-    #     device = self._vim.exec_cmd(vnf['device_id'], forward_rule)
-
     insert_db('sfc', sfc['id'], sfc)
 
     return sfc

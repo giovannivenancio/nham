@@ -1,5 +1,7 @@
 import ast
+import os
 import random
+import shutil
 import string
 
 from datetime import datetime
@@ -82,8 +84,36 @@ def load_db(db):
     for entry in entries:
         entry = entry.strip("\n")
         id, content = entry.split(' ', 1)
-        
+
         content = ast.literal_eval(content)
         data[id] = content
 
     return data
+
+def create_vnf_dir(vnf_id):
+    """Create a directory to store VNF's checkpoints."""
+
+    path = '../db/' + vnf_id
+
+    try:
+        os.mkdir(path)
+    except OSError:
+        return "error creating dir"
+
+def delete_vnf_dir(vnf_id):
+    """Create a directory to store VNF's checkpoints."""
+
+    path = '../db/' + vnf_id
+
+    try:
+        shutil.rmtree(path)
+    except Exception as e:
+        return e
+
+def write_state(vnf_id, state):
+    """Write a dumped VNF state to DB."""
+
+    path = '../db/' + vnf_id + '/checkpoint'
+
+    with open(path, 'w') as db_conn:
+        db_conn.write(state)

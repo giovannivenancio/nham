@@ -13,6 +13,7 @@ from utils import *
 app = Eve()
 
 VIM_URL = 'http://0.0.0.0:9000/vim/'
+SM_URL = 'http://0.0.0.0:9003/state/'
 
 @app.route('/vnf/create', methods=['POST'])
 def create_vnf():
@@ -46,7 +47,7 @@ def create_vnf():
         if infra_level['type'] == 'remote':
             remote_site = infra_level['remote_site']
     else:
-        vnf_level_type = None
+        vnf_level_type = '0R'
 
     # main virtual device for VNF
     r = requests.post(VIM_URL + 'create', json={
@@ -60,7 +61,7 @@ def create_vnf():
 
     # create backups
     backups = []
-    if num_backups >= 1:
+    if num_backups >= 1 and vnf_level_type != '0R':
         for i in range(num_backups):
             r = requests.post(VIM_URL + 'create', json={
             'type': virtual_device_type,
@@ -92,6 +93,10 @@ def create_vnf():
     }
 
     insert_db('vnf', vnf['id'], vnf)
+    create_vnf_dir(vnf['id'])
+
+    # send VNF ID to State Manager to start synchronization
+    r = requests.post(SM_URL + 'sync', json={'id': vnf['id']})
 
     return jsonify({'vnf': vnf})
 
@@ -160,6 +165,7 @@ def delete_vnf():
     r = requests.delete(VIM_URL + 'delete', json={'id': vnf['device_id']})
 
     remove_db('vnf', vnf_id)
+    delete_vnf_dir(vnf_id)
 
     return "VNF deleted: %s" % vnf_id
 
@@ -193,8 +199,9 @@ def purge_vnfs():
     for id in vnfs:
         try:
             remove_db('vnf', id)
-        except:
-            pass
+            delete_vnf_dir(id)
+        except Exception as e:
+            print e
 
     for id in states:
         try:
