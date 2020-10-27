@@ -166,29 +166,19 @@ def sync_db(vnf_id, vnf_function_pid, cooldown):
 
         time.sleep(cooldown)
 
-def sync_1RAA(vnf_id, vnf_function_pid, backup_pids, cooldown):
-    """Sync mechanism used by 1R-AA (1 Replica Active-Active).
-    Periodically dump VNF memory and send directly to the replica.
+def sync_replica(vnf_id, vnf_function_pid, backup_pids, cooldown):
+    """Sync mechanism used by 1R-AA (1 Replica Active-Active) and MR-AA (M Replicas Active-Active).
+    Periodically dump VNF memory and send directly to the replica(s).
     """
 
     while True:
         try:
-            pass
-        except:
-            pass
+            state = export_vnf_state(vnf_function_pid) # export VNF state
 
-        sleep(cooldown)
-
-def sync_MRAA(vnf_id, vnf_function_pid, backup_pids, cooldown):
-    """Sync mechanism used by MR-AA (M Replicas Active-Active).
-    Periodically dump VNF memory and send to each replica.
-    """
-
-    while True:
-        try:
-            pass
-        except:
-            pass
+            for backup_pid in backup_pids:
+                import_vnf_state(backup_pid, state)
+        except Exception as e:
+            print e
 
         sleep(cooldown)
 
@@ -212,7 +202,7 @@ def sync_state():
 
     # If a VNF has any backups, get the PIDs too
     backup_pids = []
-    if recovery_method != '0R':
+    if recovery_method in ['1R-AA', 'MR-AA']:
         for vnf_backup in vnf['recovery']['backups']:
             vnf_backup_id = vnf_backup['short_id']
             backup_pids.append(get_pid(vnf_backup_id))
@@ -220,29 +210,18 @@ def sync_state():
     print "vnf pid: ", vnf_function_pid
     print "backups pids: ", backup_pids
 
-    if recovery_method == '0R':
+    if recovery_method in ['0R', '1R-AS']:
         sync_vnf = Process(
             target=sync_db,
             args=(vnf_id,vnf_function_pid,cooldown))
 
-    elif recovery_method == '1R-AS':
+    elif recovery_method in ['1R-AA', 'MR-AA']:
         sync_vnf = Process(
-            target=sync_db,
-            args=(vnf_id,vnf_function_pid,cooldown))
-
-    elif recovery_method == '1R-AA':
-        sync_vnf = Process(
-            target=sync_1RAA,
-            args=(vnf_id,vnf_function_pid,backup_pids,cooldown))
-
-    elif recovery_method == 'MR-AA':
-        sync_vnf = Process(
-            target=sync_MRAA,
+            target=sync_replica,
             args=(vnf_id,vnf_function_pid,backup_pids,cooldown))
 
     sync_vnf.daemon = True
     sync_vnf.start()
-
     sync_workers[vnf_id] = sync_vnf.pid
 
     print sync_workers
