@@ -11,6 +11,7 @@ DB_VNF = '../db/vnf'
 DB_SFC = '../db/sfc'
 DB_STATE = '../db/state'
 DB_RECOVERING = '../db/recovering'
+DB_SYNC = '../db/sync'
 
 def generate_id():
     """Generate a unique 16-byte ID."""
@@ -33,6 +34,8 @@ def get_db_path(db):
         return DB_STATE
     elif db == 'recovering':
         return DB_RECOVERING
+    elif db == 'sync':
+        return DB_SYNC
 
 def insert_db(db, id, content):
     """Insert a new entry on the database."""
@@ -93,7 +96,7 @@ def load_db(db):
 def create_vnf_dir(vnf_id):
     """Create a directory to store VNF's checkpoints."""
 
-    path = '../db/' + vnf_id
+    path = '../db/checkpoints/' + vnf_id
 
     try:
         os.mkdir(path)
@@ -103,7 +106,7 @@ def create_vnf_dir(vnf_id):
 def delete_vnf_dir(vnf_id):
     """Create a directory to store VNF's checkpoints."""
 
-    path = '../db/' + vnf_id
+    path = '../db/checkpoints/' + vnf_id
 
     try:
         shutil.rmtree(path)
@@ -113,7 +116,7 @@ def delete_vnf_dir(vnf_id):
 def write_state(vnf_id, state):
     """Write a dumped VNF state to DB."""
 
-    path = '../db/' + vnf_id + '/checkpoint'
+    path = '../db/checkpoints/' + vnf_id + '/checkpoint'
 
     with open(path, 'w') as db_conn:
         db_conn.write(state)

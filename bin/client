@@ -8,9 +8,19 @@ import os
 import sys
 import requests
 
+sys.path.append("../nfv-mano/")
+
+from subprocess import Popen
+from utils import load_db, remove_db
+
+if os.geteuid() != 0:
+    print "Run as root!"
+    exit()
+
 VIM_URL = 'http://0.0.0.0:9000/vim/'
 VNF_URL = 'http://0.0.0.0:9001/vnf/'
 SFC_URL = 'http://0.0.0.0:9002/sfc/'
+SM_URL  = 'http://0.0.0.0:9003/state/'
 
 os.system('clear')
 
@@ -222,6 +232,20 @@ while True:
         r = requests.delete(VIM_URL + 'purge')
         print "\n", r.text, "\n"
 
+        os.system('echo -n > ../db/sfc')
+        os.system('echo -n > ../db/vnf')
+        os.system('echo -n > ../db/device')
+        os.system('echo -n > ../db/state')
+        os.system('echo -n > ../db/recovering')
+        os.system('rm -rf ../db/checkpoints/*')
+
+        sync = load_db('sync')
+
+        for id in sync:
+            Popen(['kill', '-9', str(sync[id])])
+
+        os.system('echo -n > ../db/sync')
+
     elif opt == 20:
         print "----------------"
         print "EXEC"
@@ -235,3 +259,7 @@ while True:
 
     elif opt == 21:
         exit()
+
+    # elif opt == 22:
+    #     id = raw_input("> ")
+    #     r = requests.post(SM_URL + 'desync', json={'id': id})

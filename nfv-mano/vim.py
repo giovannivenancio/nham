@@ -22,15 +22,21 @@ def create_virtual_device():
     num_cpus = request.json['num_cpus']
     mem_size = request.json['mem_size']
 
+    """
+    Create a Docker container. If necessary, add linux capabilities and/or privileged flag to containers, as such:
+
+    cap_add=['NET_ADMIN', 'SYS_PTRACE', 'CAP_SYS_ADMIN']
+    privileged=True
+    """
     container = dkr.containers.run(
         image,
         detach=True,
-        cap_add=['NET_ADMIN', 'SYS_PTRACE'],
         stdin_open=True,
         cpu_count=num_cpus,
         mem_limit=mem_size)
 
     container.exec_run('./sfc &', detach=True)
+    container.exec_run('./nf &', detach=True)
 
     device = {
         'id': container.id,

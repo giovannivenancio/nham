@@ -36,6 +36,7 @@ VNF_URL = 'http://0.0.0.0:9001/vnf/'
 SFC_URL = 'http://0.0.0.0:9002/sfc/'
 
 memory_permissions = 'rw'
+global sync_workers
 sync_workers = {}
 
 def ptrace(attach, pid):
@@ -43,7 +44,7 @@ def ptrace(attach, pid):
     Used to stop/resume execution when a checkpoint is being performed.
     """
 
-    #PTRACE_ATTACH or PTRACE_DETACH
+    # PTRACE_ATTACH or PTRACE_DETACH
     op = ctypes.c_int(16 if attach else 17)
     c_pid = c_pid_t(pid)
     null = ctypes.c_void_p()
@@ -89,7 +90,7 @@ def restore(pid, dump_mem):
 
     # sequentially read memory map
     with open('/proc/%d/maps' % pid, 'r') as maps_file:
-        with open('/proc/%d/mem' % pid, 'w', 0) as mem_file:
+        with open('/proc/%d/mem' % pid, 'rb+', 0) as mem_file:
             # for each mapped region
             for line in maps_file.readlines():
                 m = re.match(r'([0-9A-Fa-f]+)-([0-9A-Fa-f]+) ([-r][-w])', line)
@@ -109,7 +110,7 @@ def restore(pid, dump_mem):
                     chunk = dump_mem_fd.read(end - start)
 
                     # replace actual memory with readed content
-                    mem_file.write(chunk)
+                    #mem_file.write(chunk)
 
     dump_mem_fd.close()
 
@@ -152,7 +153,7 @@ def import_vnf_state(vnf_function_pid, dump_mem):
     restore(vnf_function_pid, dump_mem) # restore memory into VNF
     ptrace(False, vnf_function_pid)     # resume process
 
-def sync_db(vnf_id, vnf_function_pid, cooldown):
+def sync_to_db(vnf_id, vnf_function_pid, cooldown):
     """Sync mechanism used by 0R (0 replicas) and 1R-AS (1 Replica Active-Standby).
     Periodically dump VNF memory and send directly to DB.
     """
@@ -166,7 +167,7 @@ def sync_db(vnf_id, vnf_function_pid, cooldown):
 
         time.sleep(cooldown)
 
-def sync_replica(vnf_id, vnf_function_pid, backup_pids, cooldown):
+def sync_to_replica(vnf_id, vnf_function_pid, backup_pids, cooldown):
     """Sync mechanism used by 1R-AA (1 Replica Active-Active) and MR-AA (M Replicas Active-Active).
     Periodically dump VNF memory and send directly to the replica(s).
     """
@@ -184,7 +185,7 @@ def sync_replica(vnf_id, vnf_function_pid, backup_pids, cooldown):
 
 @app.route('/state/sync', methods=['POST'])
 def sync_state():
-    """Create a new process to sync internal state of active-active replication VNFs."""
+    """Create a new process to sync internal state of VNFs."""
 
     vnf_id = request.json['id']
     r = requests.get(VNF_URL + 'show', json={'vnf_id': vnf_id})
@@ -192,8 +193,6 @@ def sync_state():
 
     recovery_method = vnf['recovery']['method']
     cooldown = int(vnf['recovery']['cooldown'])
-
-    print "received VNF %s with recovery %s and cooldown %s" % (vnf_id, recovery_method, cooldown)
 
     try:
         vnf_function_pid = get_pid(vnf['short_id'])
@@ -207,24 +206,37 @@ def sync_state():
             vnf_backup_id = vnf_backup['short_id']
             backup_pids.append(get_pid(vnf_backup_id))
 
-    print "vnf pid: ", vnf_function_pid
-    print "backups pids: ", backup_pids
-
     if recovery_method in ['0R', '1R-AS']:
         sync_vnf = Process(
-            target=sync_db,
+            target=sync_to_db,
             args=(vnf_id,vnf_function_pid,cooldown))
 
     elif recovery_method in ['1R-AA', 'MR-AA']:
         sync_vnf = Process(
-            target=sync_replica,
+            target=sync_to_replica,
             args=(vnf_id,vnf_function_pid,backup_pids,cooldown))
 
     sync_vnf.daemon = True
     sync_vnf.start()
-    sync_workers[vnf_id] = sync_vnf.pid
 
-    print sync_workers
+    insert_db('sync', vnf_id, sync_vnf.pid)
+
+    return "ok"
+
+@app.route('/state/desync', methods=['POST'])
+def desync_state():
+    """Remove (kill) VNF sync worker."""
+
+    vnf_id = request.json['id']
+
+    sync = load_db('sync')
+
+    for id in sync:
+        if id == vnf_id:
+            worker_pid = str(sync[id])
+
+    Popen(['kill', '-9', worker_pid])
+    remove_db('sync', vnf_id)
 
     return "ok"
 
