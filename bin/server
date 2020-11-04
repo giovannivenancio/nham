@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$EUID" -ne 0 ]
+  then echo "Run as root."
+  exit
+fi
+
 if [ -z "$1" ]; then
 	echo "Usage: ./server <start|stop|restart>"
 	exit
@@ -9,44 +14,54 @@ if [ "$1" = "start" ]; then
 
 	echo "Initializing NFV-MANO components..."
 
-	python ../nfv-mano/vim.py &> ../nfv-mano/logs/vim.log &
+	python ../nfv-mano/vim.py &> ../logs/vim.log &
 	echo "VIM OK!"
 
-	python ../nfv-mano/vnfm.py &> ../nfv-mano/logs/vnfm.log &
+	python ../nfv-mano/vnfm.py &> ../logs/vnfm.log &
 	echo "VNFM OK!"
 
-	python ../nfv-mano/nfvo.py &> ../nfv-mano/logs/nfvo.log &
+	python ../nfv-mano/nfvo.py &> ../logs/nfvo.log &
 	echo "NFVO OK!"
+
+	python ../nham/sm.py &> ../logs/sm.log &
+	echo "SM OK!"
 
 elif [ "$1" = "stop" ]; then
 
 	echo "Stopping NFV-MANO components..."
 
 	pkill -f vim.py
-	echo "VIM stopped"
+	echo "VIM stopped!"
 
 	pkill -f vnfm.py
-	echo "VNFM stopped"
+	echo "VNFM stopped!"
 
 	pkill -f nfvo.py
-	echo "NFVO stopped"
+	echo "NFVO stopped!"
+
+	pkill -f sm.py
+	echo "SM stopped!"
 
 elif [ "$1" = "restart" ]; then
 
 	echo "Restarting NFV-MANO components..."
 
 	pkill -f vim.py
-	python ../nfv-mano/vim.py &> ../nfv-mano/logs/vim.log &
+	python ../nfv-mano/vim.py &> ../logs/vim.log &
 	echo "VIM OK!"
 
 	pkill -f vnfm.py
-	python ../nfv-mano/vnfm.py &> ../nfv-mano/logs/vnfm.log &
+	python ../nfv-mano/vnfm.py &> ../logs/vnfm.log &
 	echo "VNFM OK!"
 
 	pkill -f nfvo.py
-	python ../nfv-mano/nfvo.py &> ../nfv-mano/logs/nfvo.log &
+	python ../nfv-mano/nfvo.py &> ../logs/nfvo.log &
 	echo "NFVO OK!"
 
+	pkill -f sm.py
+	python ../nham/sm.py &> ../logs/sm.log &
+	echo "SM OK!"
+
 else
-    echo "nothing to do here."
+    echo "Nothing to do here."
 fi

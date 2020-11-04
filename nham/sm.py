@@ -52,7 +52,7 @@ def ptrace(attach, pid):
     err = c_ptrace(op, c_pid, null, null)
 
     if err != 0:
-        print err
+        return err
 
 def dump(pid):
     """Dump the contents of memory to DB or another VNF."""

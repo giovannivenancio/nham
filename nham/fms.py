@@ -10,6 +10,7 @@ from utils import *
 VIM_URL = 'http://0.0.0.0:9000/vim/'
 VNF_URL = 'http://0.0.0.0:9001/vnf/'
 SFC_URL = 'http://0.0.0.0:9002/sfc/'
+SM_URL  = 'http://0.0.0.0:9003/state/'
 
 class FaultManagementSystem():
     """
@@ -37,19 +38,26 @@ class FaultManagementSystem():
     def monitor(self):
         """Monitor each virtual device and reports if a failure was found."""
 
+        fault = False
+
         for id in self.devices:
             device = self.devices[id]
 
             print "checking health of %s %s" % (device['id'], device['ip'])
 
-            # verify if device is up and running and if it is reachable
-            # status could be paused because of checkpointing mechanism
-            # that pauses the container for a few moments to take the checkpoint.
+            # verify if device is (i) up and running and; (ii) if it is reachable
             status, networking = self.check_health(device['id'], device['ip'])
 
-            if status not in ['running', 'paused'] or not networking:
+            if status in ['paused', 'exited', 'dead'] or not networking:
                print "Fault found on device %s: status = %s networking = %s" % (id, status, networking)
-               self.alarm(id)
+               fault = True
+               break
+
+        if fault:
+            del self.devices[id]
+            self.alarm(id)
+
+        print ""
 
     def check_health(self, device_id, ip):
         """Check the health of specified device.
@@ -65,18 +73,20 @@ class FaultManagementSystem():
 
         vnfs = load_db('vnf')
 
-        # find the VNF that has a faulty device
+        # locate VNF that has a faulty device
         for vnf_id in vnfs:
             if vnfs[vnf_id]['device_id'] == device_id:
                 faulty_vnf = vnfs[vnf_id]
                 break
 
+        print "fault found on VNF %s" % faulty_vnf
+
         # recovery from failure
         print "recovering VNF"
-        runtime = self.recovery(faulty_vnf)
+        recovery_time = self.recovery(faulty_vnf)
 
         print "========================================="
-        print "Total recovery time: %s" % str(runtime).replace('.', ',')
+        print "Total recovery time: %s" % str(recovery_time).replace('.', ',')
         print "========================================="
 
         print "successfully recovered VNF %s" % faulty_vnf['id']
@@ -90,14 +100,20 @@ class FaultManagementSystem():
         4) MR-AA: multiple replicas in active mode; just check if it has any more backups.
         """
 
-        runtime = 0
-
+        recovery_time = 0
         recovery_method = faulty_vnf['recovery']['method']
 
         if recovery_method == '0R':
-            # stop and remove "master" VNF
+            # remove faulty virtual device
+            # doing it asynchronously, since removing a container consumes a lot of time
             print "removing faulty virtual device"
-            vim.delete_virtual_device(faulty_vnf['device_id'])
+            try:
+                requests.delete(VIM_URL + 'delete', json={'id': faulty_vnf['device_id']})
+            except requests.exceptions.ReadTimeout:
+                pass
+
+            # remove corresponding process responsible for synchronizing the VNF
+            requests.post(SM_URL + 'desync', json={'id': faulty_vnf['id']})
 
             start = time.time()
 
@@ -107,29 +123,34 @@ class FaultManagementSystem():
 
             # create new virtual device for VNF
             print "creating new virtual device"
-            r = requests.post(
-                VIM_URL + 'create',
-                json = {
-                    'type': 'container',
-                    'image': image,
-                    'num_cpus': num_cpus,
-                    'mem_size': mem_size
-                })
+            r = requests.post(VIM_URL + 'create', json = {
+                'type': 'container',
+                'image': image,
+                'num_cpus': num_cpus,
+                'mem_size': mem_size
+            })
 
-            new_device = r.json()
-
-            print "importing updated state"
-            sm.import_vnf_state(destination=new_device, source=faulty_vnf['id'], epoch=None)
+            new_device = r.json()['device']
 
             print "reconfiguring"
-            self.reconfigure(vim, recovery_method, faulty_vnf, new_device)
+            self.reconfigure(recovery_method, faulty_vnf, new_device)
+
+            print "importing updated state"
+            # TODO: for now, just recreating the sync worker. After worker code reword, send immediately a request
+            # to import VNF state
+            requests.post(SM_URL + 'sync', json={'id': faulty_vnf['id']})
 
             end = time.time()
-            runtime += end-start
+            recovery_time += end-start
 
         elif recovery_method == '1R-AS':
-            # stop and remove "master" VNF
-            vim.delete_virtual_device(faulty_vnf['device_id'])
+            # remove faulty virtual device
+            # doing it asynchronously, since removing a container consumes a lot of time
+            print "removing faulty virtual device"
+            try:
+                requests.delete(VIM_URL + 'delete', json={'id': faulty_vnf['device_id']})
+            except requests.exceptions.ReadTimeout:
+                pass
 
             start = time.time()
 
@@ -140,15 +161,19 @@ class FaultManagementSystem():
 
             # TODO: create new backup in background
 
-            self.reconfigure(vim, recovery_method, faulty_vnf, None)
+            self.reconfigure(recovery_method, faulty_vnf, None)
 
             end = time.time()
-            runtime += end-start-pause_time
+            recovery_time += end-start-pause_time
 
         elif recovery_method == '1R-AA':
-            # stop and remove "master" VNF
-            print "deleting %s" % faulty_vnf['device_id']
-            vim.delete_virtual_device(faulty_vnf['device_id'])
+            # remove faulty virtual device
+            # doing it asynchronously, since removing a container consumes a lot of time
+            print "removing faulty virtual device"
+            try:
+                requests.delete(VIM_URL + 'delete', json={'id': faulty_vnf['device_id']})
+            except requests.exceptions.ReadTimeout:
+                pass
 
             start = time.time()
 
@@ -157,19 +182,26 @@ class FaultManagementSystem():
             self.reconfigure(vim, recovery_method, faulty_vnf, None)
 
             end = time.time()
-            runtime += end-start
+            recovery_time += end-start
 
         elif recovery_method == 'MR-AA':
+            # remove faulty virtual device
+            # doing it asynchronously, since removing a container consumes a lot of time
+            print "removing faulty virtual device"
+            try:
+                requests.delete(VIM_URL + 'delete', json={'id': faulty_vnf['device_id']})
+            except requests.exceptions.ReadTimeout:
+                pass
 
             start = time.time()
 
             # reconfigure
-            self.reconfigure(vim, recovery_method, faulty_vnf, None)
+            self.reconfigure(recovery_method, faulty_vnf, None)
 
             end = time.time()
-            runtime += end-start
+            recovery_time += end-start
 
-        return runtime
+        return recovery_time
 
     def reconfigure(self, recovery_method, faulty_vnf, new_device):
         """After fault recovery, reconfigure VNF and SFC."""
@@ -223,12 +255,12 @@ class FaultManagementSystem():
             update_db('replace', 'vnf', faulty_vnf['id'], faulty_vnf)
 
     def mainloop(self):
-        """Periodically monitors each virtual device."""
+        """Periodically monitors each VNF."""
 
         while True:
             self.update_devices()
             self.monitor()
-            time.sleep(3)
+            time.sleep(2)
 
 if __name__ == '__main__':
     fms = FaultManagementSystem()

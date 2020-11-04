@@ -256,10 +256,3 @@ while True:
 
         r = requests.post(VIM_URL + 'run', json={'id': id, 'cmd': cmd})
         print "\n", r.text, "\n"
-
-    elif opt == 21:
-        exit()
-
-    # elif opt == 22:
-    #     id = raw_input("> ")
-    #     r = requests.post(SM_URL + 'desync', json={'id': id})
