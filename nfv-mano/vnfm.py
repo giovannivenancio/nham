@@ -100,6 +100,38 @@ def create_vnf():
 
     return jsonify({'vnf': vnf})
 
+@app.route('/vnf/backup', methods=['POST'])
+def backup():
+    """Perform backup operations on VNFs."""
+
+    vnf_id = request.json['id']
+
+    vnfs = load_db('vnf')
+
+    # search for VNF
+    for id in vnfs:
+        if id == vnf_id:
+            vnf = vnfs[id]
+
+    image = vnf['properties']['image']
+    num_cpus = vnf['properties']['num_cpus']
+    mem_size = vnf['properties']['mem_size']
+
+    # create backup
+    r = requests.post(VIM_URL + 'create', json={
+        'type': 'container',
+        'image': image,
+        'num_cpus': num_cpus,
+        'mem_size': mem_size
+    })
+
+    backup = r.json()['device']
+
+    vnf['recovery']['backups'] = [backup]
+    update_db('replace', 'vnf', vnf['id'], vnf)
+
+    return "ok"
+
 @app.route('/vnf/list', methods=['GET'])
 def list_vnfs():
     """List all VNFs."""

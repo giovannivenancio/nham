@@ -91,6 +91,17 @@ class FaultManagementSystem():
 
         print "successfully recovered VNF %s" % faulty_vnf['id']
 
+    def remove_async(self, faulty_device_id):
+        """Remove faulty virtual device.
+        Doing it asynchronously, since removing a container consumes a lot of time.
+        """
+
+        print "removing faulty virtual device"
+        try:
+            requests.delete(VIM_URL + 'delete', json={'id': faulty_device_id})
+        except requests.exceptions.ReadTimeout:
+            pass
+
     def recovery(self, faulty_vnf):
         """Recover VNF from fault.
         Recovery methods supported by NHAM are:
@@ -104,13 +115,8 @@ class FaultManagementSystem():
         recovery_method = faulty_vnf['recovery']['method']
 
         if recovery_method == '0R':
-            # remove faulty virtual device
-            # doing it asynchronously, since removing a container consumes a lot of time
-            print "removing faulty virtual device"
-            try:
-                requests.delete(VIM_URL + 'delete', json={'id': faulty_vnf['device_id']})
-            except requests.exceptions.ReadTimeout:
-                pass
+            # asynchronously remove faulty virtual device
+            self.remove_async(faulty_vnf['device_id'])
 
             # remove corresponding process responsible for synchronizing the VNF
             requests.post(SM_URL + 'desync', json={'id': faulty_vnf['id']})
@@ -136,7 +142,7 @@ class FaultManagementSystem():
             self.reconfigure(recovery_method, faulty_vnf, new_device)
 
             print "importing updated state"
-            # TODO: for now, just recreating the sync worker. After worker code reword, send immediately a request
+            # TODO: for now, just recreating the sync worker. After worker code rework, send immediately a request
             # to import VNF state
             requests.post(SM_URL + 'sync', json={'id': faulty_vnf['id']})
 
@@ -144,54 +150,46 @@ class FaultManagementSystem():
             recovery_time += end-start
 
         elif recovery_method == '1R-AS':
-            # remove faulty virtual device
-            # doing it asynchronously, since removing a container consumes a lot of time
-            print "removing faulty virtual device"
-            try:
-                requests.delete(VIM_URL + 'delete', json={'id': faulty_vnf['device_id']})
-            except requests.exceptions.ReadTimeout:
-                pass
+            # asynchronously remove faulty virtual device
+            self.remove_async(faulty_vnf['device_id'])
+
+            # remove corresponding process responsible for synchronizing the VNF
+            requests.post(SM_URL + 'desync', json={'id': faulty_vnf['id']})
 
             start = time.time()
 
-            backup = faulty_vnf['recovery']['backups'][0]
-            print "importing updated state"
-            pause_time = sm.import_vnf_state(destination=backup, source=faulty_vnf['id'], epoch=None)
-            print "tempo de pausa =", pause_time
-
-            # TODO: create new backup in background
-
+            print "reconfiguring"
             self.reconfigure(recovery_method, faulty_vnf, None)
 
+            print "importing updated state"
+            # TODO: for now, just recreating the sync worker. After worker code rework, send immediately a request
+            # to import VNF state
+            requests.post(SM_URL + 'sync', json={'id': faulty_vnf['id']})
+
+            # asynchronously create new backup
+            requests.post(VNF_URL + 'backup', json={'id': faulty_vnf['id']})
+
             end = time.time()
-            recovery_time += end-start-pause_time
+            recovery_time += end-start
 
         elif recovery_method == '1R-AA':
-            # remove faulty virtual device
-            # doing it asynchronously, since removing a container consumes a lot of time
-            print "removing faulty virtual device"
-            try:
-                requests.delete(VIM_URL + 'delete', json={'id': faulty_vnf['device_id']})
-            except requests.exceptions.ReadTimeout:
-                pass
+            # asynchronously remove faulty virtual device
+            self.remove_async(faulty_vnf['device_id'])
 
-            start = time.time()
+            # remove corresponding process responsible for synchronizing the VNF
+            requests.post(SM_URL + 'desync', json={'id': faulty_vnf['id']})
 
             # TODO: create new backup in background
 
-            self.reconfigure(vim, recovery_method, faulty_vnf, None)
+            print "reconfiguring"
+            self.reconfigure(recovery_method, faulty_vnf, None)
 
             end = time.time()
             recovery_time += end-start
 
         elif recovery_method == 'MR-AA':
-            # remove faulty virtual device
-            # doing it asynchronously, since removing a container consumes a lot of time
-            print "removing faulty virtual device"
-            try:
-                requests.delete(VIM_URL + 'delete', json={'id': faulty_vnf['device_id']})
-            except requests.exceptions.ReadTimeout:
-                pass
+            # asynchronously remove faulty virtual device
+            self.remove_async(faulty_vnf['device_id'])
 
             start = time.time()
 
@@ -223,30 +221,9 @@ class FaultManagementSystem():
 
             faulty_vnf['short_id'] = backup_device['short_id']
             faulty_vnf['device_id'] = backup_device['id']
-
-            if recovery_method == '1R-AS':
-                faulty_vnf['ip'] = vim.get_updated_ip(backup_device['id'])
-                backup_device['ip'] = faulty_vnf['ip']
-
-                # docker pulls an IP from the pool, so
-                # update device ID with new IP
-                update_db('replace', 'device', backup_device['id'], backup_device)
-            else:
-                faulty_vnf['ip'] = vim.get_updated_ip(backup_device['id'])
-
-            # TODO: insert new backup --> should be done asynchronously
-            #faulty_vnf['recovery']['backups'].append(new_device)
+            faulty_vnf['ip'] = backup_device['ip']
 
             update_db('replace', 'vnf', faulty_vnf['id'], faulty_vnf)
-
-            while True:
-                print "checking on %s %s" % (faulty_vnf['device_id'], faulty_vnf['ip'])
-                status, networking = self.check_health(faulty_vnf['device_id'], faulty_vnf['ip'])
-                print "waiting for VNF to boot: status = %s networking = %s" % (status, networking)
-
-                if status in ['running', 'paused'] and networking:
-                    print "VNF boot: OK"
-                    break
 
         elif recovery_method == 'MR-AA':
             backup_device = faulty_vnf['recovery']['backups'][0]
