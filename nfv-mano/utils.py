@@ -7,11 +7,9 @@ import string
 from datetime import datetime
 
 DB_DEVICE = '../db/device'
-DB_VNF = '../db/vnf'
-DB_SFC = '../db/sfc'
-DB_STATE = '../db/state'
-DB_RECOVERING = '../db/recovering'
-DB_SYNC = '../db/sync'
+DB_VNF    = '../db/vnf'
+DB_SFC    = '../db/sfc'
+DB_SYNC   = '../db/sync'
 
 def generate_id():
     """Generate a unique 16-byte ID."""
@@ -30,10 +28,6 @@ def get_db_path(db):
         return DB_VNF
     elif db == 'sfc':
         return DB_SFC
-    elif db == 'state':
-        return DB_STATE
-    elif db == 'recovering':
-        return DB_RECOVERING
     elif db == 'sync':
         return DB_SYNC
 

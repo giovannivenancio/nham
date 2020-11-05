@@ -225,8 +225,6 @@ def purge_vnfs():
     r = requests.delete(VIM_URL + 'purge')
 
     vnfs = load_db('vnf')
-    states = load_db('state')
-    recovering = load_db('recovering')
 
     for id in vnfs:
         try:
@@ -234,18 +232,6 @@ def purge_vnfs():
             delete_vnf_dir(id)
         except Exception as e:
             print e
-
-    for id in states:
-        try:
-            remove_db('state', id)
-        except:
-            pass
-
-    for id in recovering:
-        try:
-            remove_db('recovering', id)
-        except:
-            pass
 
     return "ok!"
 

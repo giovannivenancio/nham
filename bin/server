@@ -26,6 +26,9 @@ if [ "$1" = "start" ]; then
 	python ../nham/sm.py &> ../logs/sm.log &
 	echo "SM OK!"
 
+    python ../nham/fms.py &> ../logs/fms.log &
+	echo "FMS OK!"
+
 elif [ "$1" = "stop" ]; then
 
 	echo "Stopping NFV-MANO components..."
@@ -41,6 +44,9 @@ elif [ "$1" = "stop" ]; then
 
 	pkill -f sm.py
 	echo "SM stopped!"
+
+    pkill -f fms.py
+    echo "FMS stopped!"
 
 elif [ "$1" = "restart" ]; then
 
@@ -61,6 +67,10 @@ elif [ "$1" = "restart" ]; then
 	pkill -f sm.py
 	python ../nham/sm.py &> ../logs/sm.log &
 	echo "SM OK!"
+
+    pkill -f fms.py
+    python ../nham/fms.py &> ../logs/fms.log &
+	echo "FMS OK!"
 
 else
     echo "Nothing to do here."

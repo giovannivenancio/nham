@@ -235,8 +235,6 @@ while True:
         os.system('echo -n > ../db/sfc')
         os.system('echo -n > ../db/vnf')
         os.system('echo -n > ../db/device')
-        os.system('echo -n > ../db/state')
-        os.system('echo -n > ../db/recovering')
         os.system('rm -rf ../db/checkpoints/*')
 
         sync = load_db('sync')
