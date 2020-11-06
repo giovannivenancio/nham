@@ -83,10 +83,13 @@ def dump(pid):
 
     return memory_dump
 
-def restore(pid, dump_mem):
+def restore(pid, dump_mem, is_file):
     """Read memory map and replace with dump_mem contents."""
 
-    dump_mem_fd = open(dump_mem, 'r')
+    if is_file:
+        dump_mem_fd = open(dump_mem, 'r')
+    else:
+        dump_mem_fd = dump_mem
 
     # sequentially read memory map
     with open('/proc/%d/maps' % pid, 'r') as maps_file:
@@ -107,12 +110,13 @@ def restore(pid, dump_mem):
                     mem_file.seek(start)
 
                     # read dumped memory contents
-                    chunk = dump_mem_fd.read(end - start)
+                    #chunk = dump_mem_fd.read(end - start)
 
                     # replace actual memory with readed content
                     #mem_file.write(chunk)
 
-    dump_mem_fd.close()
+    if is_file:
+        dump_mem_fd.close()
 
 def get_pid(container_id):
     """Given a VNF ID, search for the corresponding container and the returns the application PID."""
@@ -146,11 +150,11 @@ def export_vnf_state(vnf_function_pid):
 
     return state
 
-def import_vnf_state(vnf_function_pid, dump_mem):
+def import_vnf_state(vnf_function_pid, dump_mem, is_file):
     """ptrace and replace process memory with dumped memory to import VNF state."""
 
     ptrace(True, vnf_function_pid)      # stop process
-    restore(vnf_function_pid, dump_mem) # restore memory into VNF
+    restore(vnf_function_pid, dump_mem, is_file) # restore memory into VNF
     ptrace(False, vnf_function_pid)     # resume process
 
 def sync_to_db(vnf_id, vnf_function_pid, cooldown):
@@ -163,7 +167,7 @@ def sync_to_db(vnf_id, vnf_function_pid, cooldown):
             state = export_vnf_state(vnf_function_pid) # export VNF state
             write_state(vnf_id, state) # save state to DB
         except Exception as e:
-            print e
+            print "sync_to_db error: ", e
 
         time.sleep(cooldown)
 
@@ -177,11 +181,11 @@ def sync_to_replica(vnf_id, vnf_function_pid, backup_pids, cooldown):
             state = export_vnf_state(vnf_function_pid) # export VNF state
 
             for backup_pid in backup_pids:
-                import_vnf_state(backup_pid, state)
+                import_vnf_state(backup_pid, state, False)
         except Exception as e:
-            print e
+            print "sync_to_replica error: ", e, vnf_function_pid, type(vnf_function_pid), backup_pids
 
-        sleep(cooldown)
+        time.sleep(cooldown)
 
 @app.route('/state/sync', methods=['POST'])
 def sync_state():
@@ -199,7 +203,7 @@ def sync_state():
     except:
         return "error: couldn't get container PID."
 
-    # If a VNF has any backups, get the PIDs too
+    # If a VNF has any backups, and is active-basec, get the PIDs too
     backup_pids = []
     if recovery_method in ['1R-AA', 'MR-AA']:
         for vnf_backup in vnf['recovery']['backups']:

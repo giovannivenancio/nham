@@ -52,8 +52,8 @@ class FaultManagementSystem():
                break
 
         if fault:
-            del self.devices[id]
             self.alarm(id)
+            del self.devices[id]
 
     def check_health(self, device_id, ip):
         """Check the health of specified device.
@@ -70,10 +70,14 @@ class FaultManagementSystem():
         vnfs = load_db('vnf')
 
         # locate VNF that has a faulty device
+        faulty_vnf = None
         for vnf_id in vnfs:
             if vnfs[vnf_id]['device_id'] == device_id:
                 faulty_vnf = vnfs[vnf_id]
                 break
+
+        if not faulty_vnf:
+            return "VNF not found!"
 
         # recovery from failure
         recovery_time = self.recovery(faulty_vnf)
