@@ -81,8 +81,10 @@ class FaultManagementSystem():
 
         # recovery from failure
         recovery_time = self.recovery(faulty_vnf)
+        recovery_time = "%s\n" % str(recovery_time).replace('.', ',')
 
-        print "Total recovery time: %s" % str(recovery_time).replace('.', ',')
+        with open('../eval/recovery.log', 'a') as f:
+            f.write(recovery_time)
 
     def remove_async(self, faulty_device_id):
         """Remove faulty virtual device.

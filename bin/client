@@ -21,6 +21,7 @@ VIM_URL = 'http://0.0.0.0:9000/vim/'
 VNF_URL = 'http://0.0.0.0:9001/vnf/'
 SFC_URL = 'http://0.0.0.0:9002/sfc/'
 SM_URL  = 'http://0.0.0.0:9003/state/'
+SFF_URL = 'http://0.0.0.0:9004/sff/'
 
 os.system('clear')
 
@@ -47,8 +48,7 @@ while True:
     print "18. SFC purge"
     print ""
     print "19. Reset DB"
-    print "20. Exec"
-    print "21. Exit"
+    print "20. Exec SFP"
 
     opt = input("> ")
 
@@ -57,7 +57,12 @@ while True:
         print "VIM CREATE"
         print "----------------\n"
 
-        r = requests.post(VIM_URL + 'create', json={'type': 'container', 'image': 'alpine-nfv', 'num_cpus': 1, 'mem_size': '256MB'})
+        r = requests.post(VIM_URL + 'create', json={
+            'type': 'container',
+            'image': 'alpine-nfv',
+            'num_cpus': 1,
+            'mem_size': '256MB'
+        })
         print r.text
 
     elif opt == 2:
@@ -246,11 +251,19 @@ while True:
 
     elif opt == 20:
         print "----------------"
-        print "EXEC"
+        print "EXEC SFP"
         print "----------------\n"
 
-        id = raw_input("> ")
-        cmd = raw_input("> ")
+        sfc_id = raw_input("SFC ID: ")
+        rounds = int(raw_input("Rounds: "))
 
-        r = requests.post(VIM_URL + 'run', json={'id': id, 'cmd': cmd})
+        stats = None
+        #stats = {'throughput': [456, 123, 798],'latency_per_packet': 35}
+
+        r = requests.post(SFF_URL + 'run', json={
+            'id': sfc_id,
+            'rounds': rounds,
+            'stats': stats
+        })
         print "\n", r.text, "\n"
+        #print r.json()['throughput']

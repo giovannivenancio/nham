@@ -23,6 +23,9 @@ if [ "$1" = "start" ]; then
 	python ../nfv-mano/nfvo.py &> ../logs/nfvo.log &
 	echo "NFVO OK!"
 
+    python ../nfv-mano/sff.py &> ../logs/sff.log &
+	echo "SFF OK!"
+
 	python ../nham/sm.py &> ../logs/sm.log &
 	echo "SM OK!"
 
@@ -41,6 +44,9 @@ elif [ "$1" = "stop" ]; then
 
 	pkill -f nfvo.py
 	echo "NFVO stopped!"
+
+    pkill -f sff.py
+    echo "SFF stopped!"
 
 	pkill -f sm.py
 	echo "SM stopped!"
@@ -63,6 +69,10 @@ elif [ "$1" = "restart" ]; then
 	pkill -f nfvo.py
 	python ../nfv-mano/nfvo.py &> ../logs/nfvo.log &
 	echo "NFVO OK!"
+
+    pkill -f sff.py
+    python ../nfv-mano/sff.py &> ../logs/sff.log &
+	echo "SFF OK!"
 
 	pkill -f sm.py
 	python ../nham/sm.py &> ../logs/sm.log &
