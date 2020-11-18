@@ -1,4 +1,7 @@
 *.pyc
 *.log
+*.eps
+*.png
+charts/
 db/
 nfv-mano/logs/
