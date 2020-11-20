@@ -21,6 +21,7 @@ class FaultManagementSystem():
 
     def __init__(self):
         self.devices = {}
+        time.sleep(1)
         self.update_devices()
 
     def update_devices(self):
@@ -124,7 +125,7 @@ class FaultManagementSystem():
             mem_size = faulty_vnf['properties']['mem_size']
 
             # create new virtual device for VNF
-            r = requests.post(VIM_URL + 'create', json = {
+            r = requests.post(VIM_URL + 'create', json={
                 'type': 'container',
                 'image': image,
                 'num_cpus': num_cpus,
@@ -132,6 +133,15 @@ class FaultManagementSystem():
             })
 
             new_device = r.json()['device']
+
+            # block until virtual device is fully booted
+            while True:
+                try:
+                    r = requests.get(VIM_URL + 'status', json={'id': new_device['id']})
+                    if r.text == 'running':
+                        break
+                except:
+                    continue
 
             self.reconfigure(recovery_method, faulty_vnf, new_device)
 
@@ -148,10 +158,10 @@ class FaultManagementSystem():
             # to import VNF state
             requests.post(SM_URL + 'sync', json={'id': faulty_vnf['id']})
 
-            end = time.time()
-
             # asynchronously create new backup
             requests.post(VNF_URL + 'backup', json={'id': faulty_vnf['id']})
+
+            end = time.time()
 
         elif recovery_method == '1R-AA':
             self.reconfigure(recovery_method, faulty_vnf, None)
