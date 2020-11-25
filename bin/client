@@ -237,6 +237,7 @@ while True:
         r = requests.delete(VIM_URL + 'purge')
         print "\n", r.text, "\n"
 
+        os.system('sudo service docker restart')
         os.system('echo -n > ../db/sfc')
         os.system('echo -n > ../db/vnf')
         os.system('echo -n > ../db/device')
@@ -265,5 +266,7 @@ while True:
             'rounds': rounds,
             'stats': stats
         })
-        print "\n", r.text, "\n"
-        #print r.json()['throughput']
+        #print "\n", r.text, "\n"
+        for round in r.json()['throughput']:
+            print round
+        print ""

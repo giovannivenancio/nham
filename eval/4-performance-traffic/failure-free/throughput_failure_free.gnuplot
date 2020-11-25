@@ -1,14 +1,15 @@
 # METADATA
 set encoding "utf8"
 set terminal postscript eps enhanced color font 'verdana,24'
-set output "../charts/4-throughput_failure_free.eps"
+set output "../../charts/4-throughput_failure_free.eps"
 
 # COLORING
-set style line 1 lt -1 lw 3 pt 2 linecolor rgb "#CD5C5C" pi -30
-set style line 2 lt -1 lw 3 pt 7 linecolor rgb "#696969" pi -30
-set style line 3 lt -1 lw 3 pt 1 linecolor rgb "#CD5C5C" pi -30
-set style line 4 lt -1 lw 3 pt 5 linecolor rgb "#006400" pi -30
-set style line 5 lt -1 lw 3 pt 3 linecolor rgb "#D2691E" pi -30
+set style line 1 lt -1 lw 2 pt 2 linecolor rgb "#CD5C5C" pi -30
+set style line 2 lt -1 lw 2 pt 7 linecolor rgb "#000000" pi -30
+set style line 3 lt -1 lw 2 pt 1 linecolor rgb "#CD5C5C" pi -30
+set style line 4 lt -1 lw 2 pt 5 linecolor rgb "#8B008B" pi -30
+set style line 5 lt -1 lw 2 pt 3 linecolor rgb "#008B8B" pi -30
+
 
 # LABEL
 set key outside top center horizontal
@@ -27,7 +28,7 @@ set grid ytics xtics
 # LABEL CONFIGURATION
 set xlabel "Time (s)"
 set ylabel "Throughput (Mbps)"
-set yrange [0:1000]
+set yrange [400:1000]
 set xrange [0:180]
 set xtics 30
 

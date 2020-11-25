@@ -18,7 +18,7 @@ SFC_URL = 'http://0.0.0.0:9002/sfc/'
 
 port = 10000
 count = 10000
-BUFSIZE = 8192
+BUFSIZE = 4092
 
 @app.route('/sff/run', methods=['POST'])
 def create_sfp():
@@ -62,20 +62,38 @@ def create_sfp():
         data = "x" * (BUFSIZE-1) + "\n"
 
         # Starts measuring the time for the packets to traverse the entire SFC chain
-        t1 = time.time()
+        # t1 = time.time()
+        #
+        # # Perform the SFP forwarding
+        # for vnf in sfp:
+        #     for i in range(count):
+        #         vnf.send(data)
+        #         data = vnf.recv(BUFSIZE)
+        #
+        #     vnf.shutdown(1)
+        #
+        # t2 = time.time()
 
-        # Perform the SFP forwarding
-        for vnf in sfp:
-            # send data to VNF
-            i = 0
-            while i < count:
-                i += 1
+        init = time.time()
+        buffer = 8
+        counter = 0
+        r = 0
+        while True:
+            for vnf in sfp:
                 vnf.send(data)
+                counter += 1
                 data = vnf.recv(BUFSIZE)
+                current_timestamp = time.time() - init
 
-            vnf.shutdown(1)
-
-        t2 = time.time()
+                if current_timestamp >= 1:
+                    current_throughput = ((counter*BUFSIZE*0.001)/1000)*8
+                    print current_timestamp, current_throughput
+                    stats['throughput'].append(current_throughput)
+                    init = time.time()
+                    counter = 0
+                    r += 1
+                    if r > rounds:
+                        return jsonify(stats)
 
         # Compute SFC throughput
         throughput_KB = round((BUFSIZE*count*0.001) / (t2 - t1), 3) # KB/s
