@@ -18,7 +18,7 @@ SFC_URL = 'http://0.0.0.0:9002/sfc/'
 
 port = 10000
 count = 10000
-BUFSIZE = 4092
+BUFSIZE = 8192
 
 @app.route('/sff/run', methods=['POST'])
 def create_sfp():
@@ -37,7 +37,7 @@ def create_sfp():
     if not stats:
         stats = {
             'throughput': [],
-            'latency_per_packet': 0
+            'latency_per_packet': []
         }
 
     r = requests.get(SFC_URL + 'show', json={'sfc_id': sfc_id})
@@ -61,19 +61,34 @@ def create_sfp():
         # create packet payload
         data = "x" * (BUFSIZE-1) + "\n"
 
-        # Starts measuring the time for the packets to traverse the entire SFC chain
-        # t1 = time.time()
-        #
-        # # Perform the SFP forwarding
-        # for vnf in sfp:
-        #     for i in range(count):
-        #         vnf.send(data)
-        #         data = vnf.recv(BUFSIZE)
-        #
-        #     vnf.shutdown(1)
-        #
-        # t2 = time.time()
+        """ -> this code was used to measure average throughput
+        #Starts measuring the time for the packets to traverse the entire SFC chain
+        t1 = time.time()
 
+        # Perform the SFP forwarding
+        for vnf in sfp:
+            for i in range(count):
+                vnf.send(data)
+                data = vnf.recv(BUFSIZE)
+
+            vnf.shutdown(1)
+
+        t2 = time.time()
+        """
+
+
+        # Perform the SFP forwarding
+        for i in range(count):
+            t1 = time.time()
+            for vnf in sfp:
+                vnf.send(data)
+                data = vnf.recv(BUFSIZE)
+            t2 = time.time()
+            lat = (t2-t1)*1000000
+            stats['latency_per_packet'].append(lat)
+        return jsonify(stats)
+
+        """ -> this code was used to measure throughput per second.
         init = time.time()
         buffer = 8
         counter = 0
@@ -94,6 +109,7 @@ def create_sfp():
                     r += 1
                     if r > rounds:
                         return jsonify(stats)
+        """
 
         # Compute SFC throughput
         throughput_KB = round((BUFSIZE*count*0.001) / (t2 - t1), 3) # KB/s

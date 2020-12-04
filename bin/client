@@ -267,6 +267,8 @@ while True:
             'stats': stats
         })
         #print "\n", r.text, "\n"
-        for round in r.json()['throughput']:
-            print round
+        f = open('log', 'w')
+        for round in r.json()['latency_per_packet']:
+            f.write(str(round) + '\n')
+        f.close()
         print ""

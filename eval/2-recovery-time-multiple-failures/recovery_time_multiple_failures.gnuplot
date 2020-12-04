@@ -30,7 +30,7 @@ set ylabel "Average Recovery Time (s)"
 set grid ytics lw 1 lc rgb "#505050"
 set yrange [0.0001:100]
 set logscale y
-set xtics ("2" 0, "4" 1, "8" 2)
+set xtics ("1" 0, "2" 1, "4" 2, "8" 3)
 set ytics (0.0001, 0.001, 0.01, 0.1, 1, 10)
 
 # PLOT DATA
