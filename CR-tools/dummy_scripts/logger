@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "dummy.py", line 9, in <module>
+    time.sleep(1)
+KeyboardInterrupt
