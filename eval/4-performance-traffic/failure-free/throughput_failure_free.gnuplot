@@ -26,8 +26,10 @@ set zeroaxis;
 set grid ytics xtics
 
 # LABEL CONFIGURATION
-set xlabel "Time (s)"
-set ylabel "Throughput (Mbps)"
+#set xlabel "Time (s)"
+#set ylabel "Throughput (Mbps)"
+set xlabel "Tempo (s)"
+set ylabel "Vazão (Mbps)"
 set yrange [400:1000]
 set xrange [0:180]
 set xtics 30

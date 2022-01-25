@@ -24,8 +24,10 @@ set boxwidth 0.9
 set tic scale 0
 
 # LABEL CONFIGURATION
-set xlabel "Number of Failures per SFC"
-set ylabel "Average Recovery Time (s)"
+#set xlabel "Number of Failures per SFC"
+#set ylabel "Average Recovery Time (s)"
+set xlabel "Número de Falhas por SFC"
+set ylabel "Tempo Médio de Recuperação (s)"
 
 set grid ytics lw 1 lc rgb "#505050"
 set yrange [0.0001:100]
